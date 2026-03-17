@@ -1,0 +1,2201 @@
+/* ============================================================================
+   REDCON OFFENCE — SECURITY SCANNER THEME
+   "UNMATCHED PERCEPTION. UNBROKEN WILL."
+   Faithful to redconoffence.com brand identity
+   ============================================================================ */
+
+/* ============================================================================
+   CSS VARIABLES — Real RedConOffence.com Brand Colors
+   ============================================================================ */
+
+:root {
+    /* ── Brand Reds (exact from redconoffence.com) ── */
+    --redcon-primary:       #c9353f;          /* Main brand red */
+    --redcon-primary-hover: #e05561;          /* Hover / bright red */
+    --redcon-primary-dark:  #8b2635;          /* Deeper red */
+    --redcon-glow:          rgba(201,53,63,0.22);
+    --redcon-glow-sm:       rgba(201,53,63,0.10);
+
+    /* ── Backgrounds (GitHub-style dark from site) ── */
+    --redcon-bg:            #0d1117;          /* Page background */
+    --redcon-dark:          #0d1117;
+    --redcon-darker:        #010409;          /* Deepest black */
+    --redcon-card:          #161b22;          /* Card background */
+    --redcon-card-hover:    #1c2128;          /* Elevated / hover card */
+    --redcon-elevated:      #1c2128;
+
+    /* ── Borders ── */
+    --redcon-border:        #2d333b;
+    --redcon-border-hover:  #444c56;
+
+    /* ── Text ── */
+    --redcon-text:          #f0f3f6;          /* Primary text */
+    --redcon-text-secondary:#9198a1;          /* Muted text */
+    --redcon-text-muted:    #636c76;          /* Very muted */
+    --redcon-accent:        #e05561;          /* Light red accent */
+
+    /* ── Severity Colors ── */
+    --critical:             #ef4444;
+    --high:                 #f97316;
+    --medium:               #fbbf24;
+    --low:                  #10b981;
+    --info:                 #58a6ff;
+
+    /* ── Status ── */
+    --success:              #3fb950;
+    --warning:              #d29922;
+
+    /* ── Bootstrap Overrides ── */
+    --bs-body-bg:           var(--redcon-bg);
+    --bs-body-color:        var(--redcon-text);
+    --bs-primary:           var(--redcon-primary);
+    --bs-border-color:      var(--redcon-border);
+}
+
+/* ============================================================================
+   GLOBAL RESET & BASE
+   ============================================================================ */
+
+*, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background-color: var(--redcon-bg);
+    color: var(--redcon-text);
+    min-height: 100vh;
+    font-size: 15px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+
+    /* Subtle radial red glow — matches real site */
+    background-image:
+        radial-gradient(ellipse at 70% 5%, rgba(201,53,63,0.10) 0%, transparent 55%),
+        radial-gradient(ellipse at 10% 80%, rgba(201,53,63,0.05) 0%, transparent 40%);
+}
+
+/* Subtle grid overlay like redconoffence.com */
+body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+        linear-gradient(rgba(201,53,63,0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(201,53,63,0.025) 1px, transparent 1px);
+    background-size: 48px 48px;
+    pointer-events: none;
+    z-index: 0;
+}
+
+main.main-content, nav, .redcon-brand {
+    position: relative;
+    z-index: 1;
+}
+
+/* ============================================================================
+   REDCON BRAND HEADER
+   ============================================================================ */
+
+.redcon-brand {
+    background: linear-gradient(180deg, var(--redcon-darker) 0%, var(--redcon-bg) 100%);
+    padding: 1.75rem 0 1.5rem;
+    border-bottom: 1px solid var(--redcon-primary);
+    box-shadow: 0 4px 32px var(--redcon-glow);
+    position: relative;
+    overflow: hidden;
+    text-align: center;
+}
+
+/* Radar sweep animation behind header */
+.redcon-brand::before {
+    content: '';
+    position: absolute;
+    top: -60%;
+    left: 50%;
+    width: 420px;
+    height: 420px;
+    margin-left: -210px;
+    border-radius: 50%;
+    border: 1px solid var(--redcon-glow-sm);
+    background: conic-gradient(from 0deg, var(--redcon-glow) 0deg, transparent 60deg);
+    animation: radar-sweep 8s linear infinite;
+    pointer-events: none;
+    opacity: 0.4;
+}
+
+@keyframes radar-sweep {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+}
+
+.redcon-brand-inner {
+    position: relative;
+    z-index: 1;
+}
+
+.redcon-logo {
+    font-family: 'Space Grotesk', 'Inter', sans-serif;
+    font-size: 2.25rem;
+    font-weight: 900;
+    letter-spacing: 0.2em;
+    color: var(--redcon-primary);
+    text-shadow: 0 0 24px var(--redcon-glow);
+    margin-bottom: 0;
+    line-height: 1;
+}
+
+.redcon-tagline {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 600;
+    letter-spacing: 0.35em;
+    color: var(--redcon-text-secondary);
+    text-transform: uppercase;
+    margin-top: 0.2rem;
+}
+
+.redcon-motto {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.72rem;
+    font-weight: 400;
+    letter-spacing: 0.18em;
+    color: var(--redcon-text-muted);
+    text-transform: uppercase;
+    margin-top: 0.5rem;
+}
+
+/* Brand separator line */
+.redcon-brand::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 120px;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--redcon-primary), transparent);
+}
+
+/* ============================================================================
+   NAVIGATION
+   ============================================================================ */
+
+.navbar {
+    background: rgba(1, 4, 9, 0.92) !important;
+    border-bottom: 1px solid var(--redcon-border);
+    padding: 0.75rem 0;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+}
+
+.navbar-brand {
+    font-family: 'Space Grotesk', 'Inter', sans-serif;
+    font-weight: 700;
+    font-size: 1rem;
+    letter-spacing: 0.06em;
+    color: var(--redcon-text) !important;
+    transition: color 0.2s ease;
+}
+
+.navbar-brand:hover {
+    color: var(--redcon-primary) !important;
+}
+
+.navbar-brand i {
+    color: var(--redcon-primary);
+}
+
+.nav-link {
+    color: var(--redcon-text-secondary) !important;
+    font-weight: 500;
+    font-size: 0.875rem;
+    transition: color 0.2s ease;
+    position: relative;
+    padding: 0.5rem 0.875rem !important;
+    letter-spacing: 0.01em;
+}
+
+.nav-link::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    width: 0;
+    height: 2px;
+    background: var(--redcon-primary);
+    transition: width 0.25s ease, left 0.25s ease;
+    border-radius: 2px;
+}
+
+.nav-link:hover {
+    color: var(--redcon-text) !important;
+}
+
+.nav-link:hover::after,
+.nav-link.active::after {
+    width: 80%;
+    left: 10%;
+}
+
+.nav-link.active {
+    color: var(--redcon-primary) !important;
+}
+
+.navbar-toggler {
+    border-color: var(--redcon-border);
+}
+
+.dropdown-menu {
+    background: var(--redcon-card);
+    border: 1px solid var(--redcon-border);
+    border-radius: 10px;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.6);
+    padding: 0.5rem;
+}
+
+.dropdown-item {
+    color: var(--redcon-text);
+    border-radius: 6px;
+    padding: 0.5rem 0.875rem;
+    font-size: 0.875rem;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.dropdown-item:hover {
+    background: var(--redcon-card-hover);
+    color: var(--redcon-primary);
+}
+
+/* ============================================================================
+   CARDS — with top accent line (redconoffence.com product card style)
+   ============================================================================ */
+
+.card {
+    background: var(--redcon-card);
+    border: 1px solid var(--redcon-border);
+    border-radius: 14px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.35);
+    transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.25s ease;
+    overflow: hidden;
+    position: relative;
+}
+
+/* Top gradient accent bar — real site product card style */
+.card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--redcon-primary-dark), var(--redcon-primary), var(--redcon-primary-hover));
+    border-radius: 14px 14px 0 0;
+    opacity: 0;
+    transition: opacity 0.25s ease;
+}
+
+.card:hover::before {
+    opacity: 1;
+}
+
+.card:hover {
+    border-color: var(--redcon-border-hover);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px rgba(201,53,63,0.15);
+    transform: translateY(-3px);
+}
+
+.card-header {
+    background: var(--redcon-darker);
+    border-bottom: 1px solid var(--redcon-border);
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: var(--redcon-text);
+    padding: 1rem 1.5rem;
+    letter-spacing: 0.01em;
+}
+
+.card-body {
+    background: var(--redcon-card);
+    color: var(--redcon-text);
+    padding: 1.5rem;
+}
+
+.card-footer {
+    background: rgba(1,4,9,0.4);
+    border-top: 1px solid var(--redcon-border);
+    color: var(--redcon-text-secondary);
+    padding: 0.875rem 1.5rem;
+    font-size: 0.875rem;
+}
+
+/* ============================================================================
+   BUTTONS
+   ============================================================================ */
+
+.btn {
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.875rem;
+    padding: 0.6rem 1.25rem;
+    transition: all 0.25s ease;
+    border: 1px solid transparent;
+    letter-spacing: 0.01em;
+}
+
+.btn-primary {
+    background: var(--redcon-primary);
+    color: #fff;
+    border-color: var(--redcon-primary);
+}
+
+.btn-primary:hover,
+.btn-primary:focus {
+    background: var(--redcon-primary-hover);
+    border-color: var(--redcon-primary-hover);
+    box-shadow: 0 4px 20px var(--redcon-glow);
+    transform: translateY(-2px);
+    color: #fff;
+}
+
+.btn-danger {
+    background: var(--critical);
+    border-color: var(--critical);
+    color: #fff;
+}
+
+.btn-danger:hover {
+    background: #dc2626;
+    border-color: #dc2626;
+    transform: translateY(-1px);
+    color: #fff;
+}
+
+.btn-success {
+    background: var(--success);
+    border-color: var(--success);
+    color: #fff;
+}
+
+.btn-success:hover {
+    background: #2ea043;
+    border-color: #2ea043;
+    transform: translateY(-1px);
+    color: #fff;
+}
+
+.btn-outline-primary {
+    border: 1px solid var(--redcon-primary);
+    color: var(--redcon-primary);
+    background: transparent;
+}
+
+.btn-outline-primary:hover {
+    background: var(--redcon-primary);
+    color: #fff;
+    box-shadow: 0 4px 16px var(--redcon-glow);
+    transform: translateY(-1px);
+}
+
+.btn-outline-secondary {
+    border: 1px solid var(--redcon-border);
+    color: var(--redcon-text-secondary);
+    background: transparent;
+}
+
+.btn-outline-secondary:hover {
+    background: var(--redcon-card-hover);
+    border-color: var(--redcon-border-hover);
+    color: var(--redcon-text);
+}
+
+.btn-outline-danger {
+    border: 1px solid var(--critical);
+    color: var(--critical);
+    background: transparent;
+}
+
+.btn-outline-danger:hover {
+    background: var(--critical);
+    color: #fff;
+    transform: translateY(-1px);
+}
+
+.btn-sm {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.8rem;
+    border-radius: 6px;
+}
+
+.btn-lg {
+    padding: 0.8rem 1.75rem;
+    font-size: 1rem;
+    border-radius: 10px;
+}
+
+/* ============================================================================
+   BADGES
+   ============================================================================ */
+
+.badge {
+    font-size: 0.72rem;
+    font-weight: 600;
+    padding: 0.35em 0.75em;
+    border-radius: 6px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+/* Severity badges */
+.severity-critical, .badge-critical {
+    background: rgba(239,68,68,0.15) !important;
+    color: #fca5a5 !important;
+    border: 1px solid rgba(239,68,68,0.4) !important;
+    animation: pulse-critical 2.5s ease-in-out infinite;
+}
+
+@keyframes pulse-critical {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.4); }
+    50%       { box-shadow: 0 0 0 6px rgba(239,68,68,0); }
+}
+
+.severity-high, .badge-high {
+    background: rgba(249,115,22,0.15) !important;
+    color: #fdba74 !important;
+    border: 1px solid rgba(249,115,22,0.4) !important;
+}
+
+.severity-medium, .badge-medium {
+    background: rgba(251,191,36,0.15) !important;
+    color: #fde68a !important;
+    border: 1px solid rgba(251,191,36,0.4) !important;
+}
+
+.severity-low, .badge-low {
+    background: rgba(63,185,80,0.15) !important;
+    color: #86efac !important;
+    border: 1px solid rgba(63,185,80,0.4) !important;
+}
+
+.severity-info, .badge-info {
+    background: rgba(88,166,255,0.15) !important;
+    color: #93c5fd !important;
+    border: 1px solid rgba(88,166,255,0.4) !important;
+}
+
+/* Status badges */
+.status-active, .badge-active {
+    background: rgba(63,185,80,0.15) !important;
+    color: #86efac !important;
+    border: 1px solid rgba(63,185,80,0.4) !important;
+}
+
+.status-scanning, .badge-scanning {
+    background: rgba(210,153,34,0.15) !important;
+    color: #fde68a !important;
+    border: 1px solid rgba(210,153,34,0.4) !important;
+}
+
+.badge-scanned {
+    background: rgba(88,166,255,0.15) !important;
+    color: #93c5fd !important;
+    border: 1px solid rgba(88,166,255,0.4) !important;
+}
+
+.badge-inactive {
+    background: rgba(45,51,59,0.6) !important;
+    color: var(--redcon-text-muted) !important;
+    border: 1px solid var(--redcon-border) !important;
+}
+
+/* ============================================================================
+   TYPOGRAPHY
+   ============================================================================ */
+
+h1, h2, h3, h4, h5, h6 {
+    font-family: 'Space Grotesk', 'Inter', sans-serif;
+    font-weight: 700;
+    color: var(--redcon-text);
+    line-height: 1.25;
+}
+
+h1 { font-size: 1.875rem; margin-bottom: 1.25rem; }
+h2 { font-size: 1.375rem; margin-bottom: 1rem; }
+h3 { font-size: 1.125rem; margin-bottom: 0.75rem; }
+h4 { font-size: 1rem;     font-weight: 600; }
+h5 { font-size: 0.9rem;   font-weight: 600; }
+h6 { font-size: 0.825rem; font-weight: 600; }
+
+.display-1, .display-2, .display-3, .display-4 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 900;
+}
+
+.lead {
+    font-size: 1.05rem;
+    color: var(--redcon-text-secondary);
+    line-height: 1.65;
+}
+
+a {
+    color: var(--redcon-primary);
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+a:hover {
+    color: var(--redcon-primary-hover);
+}
+
+/* ============================================================================
+   MAIN CONTENT AREA
+   ============================================================================ */
+
+.main-content {
+    padding: 2rem;
+    min-height: calc(100vh - 180px);
+}
+
+.container-fluid {
+    max-width: 1440px;
+}
+
+/* Page header utility */
+.page-header {
+    margin-bottom: 2rem;
+    padding-bottom: 1.25rem;
+    border-bottom: 1px solid var(--redcon-border);
+}
+
+.page-header h1 {
+    margin-bottom: 0.25rem;
+}
+
+/* ============================================================================
+   PROJECT CARDS
+   ============================================================================ */
+
+.project-card {
+    background: var(--redcon-card);
+    border: 1px solid var(--redcon-border);
+    border-radius: 14px;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+.project-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--redcon-primary-dark), var(--redcon-primary), var(--redcon-primary-hover));
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.3s ease;
+}
+
+.project-card:hover::before {
+    transform: scaleX(1);
+}
+
+.project-card:hover {
+    border-color: var(--redcon-border-hover);
+    box-shadow: 0 12px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(201,53,63,0.12);
+    transform: translateY(-4px);
+}
+
+/* ============================================================================
+   STATS CARDS — with icon boxes
+   ============================================================================ */
+
+.stats-card {
+    background: var(--redcon-card);
+    border: 1px solid var(--redcon-border);
+    border-radius: 14px;
+    padding: 1.5rem;
+    transition: all 0.25s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.stats-card::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--redcon-primary), transparent);
+    opacity: 0;
+    transition: opacity 0.25s ease;
+}
+
+.stats-card:hover {
+    border-color: var(--redcon-border-hover);
+    box-shadow: 0 8px 28px rgba(0,0,0,0.4);
+    transform: translateY(-2px);
+}
+
+.stats-card:hover::after {
+    opacity: 1;
+}
+
+.stats-number {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: var(--redcon-primary);
+    line-height: 1;
+    margin-bottom: 0.4rem;
+}
+
+.stats-label {
+    font-size: 0.8rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--redcon-text-secondary);
+    font-weight: 500;
+}
+
+/* ============================================================================
+   FINDING CARDS
+   ============================================================================ */
+
+.finding-card {
+    background: var(--redcon-card);
+    border: 1px solid var(--redcon-border);
+    border-left: 4px solid var(--redcon-primary);
+    border-radius: 10px;
+    transition: all 0.25s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.finding-card:hover {
+    border-left-width: 5px;
+    box-shadow: 0 8px 28px rgba(0,0,0,0.4);
+    transform: translateY(-2px);
+    border-color: var(--redcon-border-hover);
+    border-left-color: inherit;
+}
+
+.finding-card.severity-critical { border-left-color: var(--critical); }
+.finding-card.severity-high     { border-left-color: var(--high); }
+.finding-card.severity-medium   { border-left-color: var(--medium); }
+.finding-card.severity-low      { border-left-color: var(--low); }
+
+/* ============================================================================
+   ICON BOXES
+   ============================================================================ */
+
+.icon-box {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    background: rgba(201,53,63,0.08);
+    border: 1px solid rgba(201,53,63,0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    color: var(--redcon-primary);
+    flex-shrink: 0;
+    transition: all 0.2s ease;
+}
+
+.icon-box-success { background: rgba(63,185,80,0.08); border-color: rgba(63,185,80,0.2); color: var(--success); }
+.icon-box-warning { background: rgba(210,153,34,0.08); border-color: rgba(210,153,34,0.2); color: var(--warning); }
+.icon-box-info    { background: rgba(88,166,255,0.08); border-color: rgba(88,166,255,0.2); color: var(--info); }
+.icon-box-danger  { background: rgba(239,68,68,0.08); border-color: rgba(239,68,68,0.2); color: var(--critical); }
+
+/* ============================================================================
+   TABLES
+   ============================================================================ */
+
+.table {
+    color: var(--redcon-text);
+    border-color: var(--redcon-border);
+    margin-bottom: 0;
+    font-size: 0.9rem;
+}
+
+.table th {
+    background: var(--redcon-darker);
+    color: var(--redcon-text-secondary);
+    font-weight: 600;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    border-color: var(--redcon-border);
+    padding: 0.875rem 1rem;
+}
+
+.table td {
+    background: var(--redcon-card);
+    border-color: var(--redcon-border);
+    color: var(--redcon-text);
+    padding: 0.875rem 1rem;
+    vertical-align: middle;
+}
+
+.table tbody tr {
+    transition: background 0.15s ease;
+}
+
+.table tbody tr:hover td {
+    background: var(--redcon-card-hover);
+}
+
+.table-striped tbody tr:nth-of-type(odd) td {
+    background: rgba(201,53,63,0.025);
+}
+
+/* ============================================================================
+   FORMS
+   ============================================================================ */
+
+.form-control,
+.form-select {
+    background: var(--redcon-darker);
+    border: 1px solid var(--redcon-border);
+    color: var(--redcon-text);
+    border-radius: 8px;
+    padding: 0.6rem 1rem;
+    font-size: 0.9rem;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.form-control:focus,
+.form-select:focus {
+    background: var(--redcon-card);
+    border-color: var(--redcon-primary);
+    color: var(--redcon-text);
+    box-shadow: 0 0 0 3px rgba(201,53,63,0.18);
+    outline: none;
+}
+
+.form-control::placeholder {
+    color: var(--redcon-text-muted);
+}
+
+.form-label {
+    color: var(--redcon-text);
+    font-weight: 500;
+    font-size: 0.875rem;
+    margin-bottom: 0.5rem;
+}
+
+.form-text {
+    color: var(--redcon-text-secondary);
+    font-size: 0.8rem;
+}
+
+.form-check-input:checked {
+    background-color: var(--redcon-primary);
+    border-color: var(--redcon-primary);
+}
+
+.form-check-input:focus {
+    border-color: var(--redcon-primary);
+    box-shadow: 0 0 0 3px rgba(201,53,63,0.18);
+}
+
+/* Input groups */
+.input-group-text {
+    background: var(--redcon-darker);
+    border-color: var(--redcon-border);
+    color: var(--redcon-text-secondary);
+}
+
+/* ============================================================================
+   ALERTS
+   ============================================================================ */
+
+.alert {
+    border: 1px solid;
+    border-radius: 10px;
+    font-size: 0.9rem;
+    padding: 1rem 1.25rem;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+}
+
+.alert-danger  { background: rgba(239,68,68,0.08);  border-color: rgba(239,68,68,0.35);  color: #fca5a5; }
+.alert-warning { background: rgba(210,153,34,0.08); border-color: rgba(210,153,34,0.35); color: #fde68a; }
+.alert-success { background: rgba(63,185,80,0.08);  border-color: rgba(63,185,80,0.35);  color: #86efac; }
+.alert-info    { background: rgba(88,166,255,0.08); border-color: rgba(88,166,255,0.35); color: #93c5fd; }
+
+/* ============================================================================
+   PROGRESS BARS
+   ============================================================================ */
+
+.progress {
+    background: var(--redcon-darker);
+    border: 1px solid var(--redcon-border);
+    height: 8px;
+    border-radius: 99px;
+    overflow: hidden;
+}
+
+.progress-bar {
+    background: linear-gradient(90deg, var(--redcon-primary-dark), var(--redcon-primary), var(--redcon-primary-hover));
+    border-radius: 99px;
+    transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ============================================================================
+   MODALS
+   ============================================================================ */
+
+.modal-content {
+    background: var(--redcon-card);
+    border: 1px solid var(--redcon-border);
+    border-radius: 16px;
+    box-shadow: 0 24px 80px rgba(0,0,0,0.8), 0 0 0 1px rgba(201,53,63,0.1);
+    overflow: hidden;
+}
+
+.modal-header {
+    background: var(--redcon-darker);
+    border-bottom: 1px solid var(--redcon-border);
+    color: var(--redcon-text);
+    padding: 1.25rem 1.5rem;
+}
+
+.modal-title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 1.05rem;
+}
+
+.modal-body {
+    color: var(--redcon-text);
+    padding: 1.5rem;
+    background: var(--redcon-card);
+}
+
+.modal-footer {
+    background: var(--redcon-darker);
+    border-top: 1px solid var(--redcon-border);
+    padding: 1rem 1.5rem;
+}
+
+.modal-backdrop,
+.modal-backdrop.show,
+.modal-backdrop.fade {
+    display: none !important;
+}
+
+.btn-close {
+    filter: brightness(0) invert(1);
+    opacity: 0.5;
+}
+
+.btn-close:hover {
+    opacity: 1;
+}
+
+/* ============================================================================
+   CODE BLOCKS
+   ============================================================================ */
+
+pre, code {
+    font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+}
+
+pre {
+    background: var(--redcon-darker);
+    border: 1px solid var(--redcon-border);
+    border-left: 3px solid var(--redcon-primary);
+    border-radius: 8px;
+    padding: 1.25rem;
+    overflow-x: auto;
+    color: var(--redcon-text);
+    font-size: 0.85rem;
+    line-height: 1.6;
+}
+
+code {
+    background: rgba(201,53,63,0.08);
+    border: 1px solid rgba(201,53,63,0.2);
+    border-radius: 4px;
+    padding: 0.15rem 0.45rem;
+    color: var(--redcon-accent);
+    font-size: 0.85em;
+}
+
+pre code {
+    background: none;
+    border: none;
+    padding: 0;
+    color: var(--redcon-text);
+    font-size: inherit;
+}
+
+/* ============================================================================
+   BREADCRUMBS
+   ============================================================================ */
+
+.breadcrumb {
+    background: transparent;
+    padding: 0;
+    margin: 0 0 1.5rem;
+    font-size: 0.875rem;
+}
+
+.breadcrumb-item {
+    color: var(--redcon-text-secondary);
+}
+
+.breadcrumb-item a {
+    color: var(--redcon-text-secondary);
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+.breadcrumb-item a:hover {
+    color: var(--redcon-primary);
+}
+
+.breadcrumb-item.active {
+    color: var(--redcon-text);
+}
+
+.breadcrumb-item + .breadcrumb-item::before {
+    content: "/";
+    color: var(--redcon-border-hover);
+}
+
+/* ============================================================================
+   DIRECTORY TREE
+   ============================================================================ */
+
+.directory-tree {
+    background: var(--redcon-darker);
+    border: 1px solid var(--redcon-border);
+    border-radius: 10px;
+    padding: 1rem;
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+.directory-item {
+    padding: 0.4rem 0.5rem;
+    margin: 0.15rem 0;
+    border-radius: 6px;
+    transition: background 0.15s ease;
+}
+
+.directory-item:hover {
+    background: var(--redcon-card);
+}
+
+.directory-label {
+    color: var(--redcon-text);
+    cursor: pointer;
+    font-size: 0.875rem;
+}
+
+.directory-label:hover {
+    color: var(--redcon-primary);
+}
+
+.directory-label .bi-folder,
+.directory-label .bi-folder2-open {
+    color: var(--redcon-primary);
+}
+
+.tree-toggle {
+    background: none;
+    border: none;
+    color: var(--redcon-text-secondary);
+    cursor: pointer;
+    padding: 0 0.25rem;
+    transition: color 0.15s ease;
+}
+
+.tree-toggle:hover {
+    color: var(--redcon-primary);
+}
+
+/* ============================================================================
+   UPLOAD AREA
+   ============================================================================ */
+
+.upload-area {
+    border: 2px dashed var(--redcon-border);
+    border-radius: 12px;
+    padding: 3rem 2rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    background: var(--redcon-darker);
+}
+
+.upload-area:hover,
+.upload-area.dragover {
+    border-color: var(--redcon-primary);
+    background: rgba(201,53,63,0.04);
+    box-shadow: 0 0 0 4px rgba(201,53,63,0.08);
+}
+
+.upload-area i {
+    font-size: 2.75rem;
+    color: var(--redcon-primary);
+    margin-bottom: 1rem;
+    display: block;
+}
+
+/* ============================================================================
+   LOG VIEWER
+   ============================================================================ */
+
+.log-card {
+    background: var(--redcon-card);
+    border: 1px solid var(--redcon-border);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    padding: 1rem;
+}
+
+.log-card:hover {
+    background: var(--redcon-card-hover);
+    border-color: var(--redcon-border-hover);
+    transform: translateX(3px);
+}
+
+.log-meta {
+    font-size: 0.8rem;
+    color: var(--redcon-text-secondary);
+    font-family: 'JetBrains Mono', monospace;
+}
+
+/* ============================================================================
+   THREAT MODEL CARDS
+   ============================================================================ */
+
+.threat-model-card {
+    background: var(--redcon-card);
+    border: 1px solid var(--redcon-border);
+    border-radius: 10px;
+    padding: 1.1rem;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    font-size: 0.875rem;
+}
+
+.threat-model-card:hover {
+    border-color: var(--redcon-border-hover);
+    background: var(--redcon-card-hover);
+}
+
+.threat-model-card.selected {
+    border-color: var(--redcon-primary);
+    background: rgba(201,53,63,0.06);
+    box-shadow: 0 0 0 1px var(--redcon-primary);
+}
+
+/* ============================================================================
+   SCROLLBARS
+   ============================================================================ */
+
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--redcon-darker);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--redcon-border);
+    border-radius: 99px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--redcon-primary);
+}
+
+/* ============================================================================
+   LOADING STATES
+   ============================================================================ */
+
+.spinner-border {
+    border-color: var(--redcon-primary);
+    border-right-color: transparent;
+}
+
+.spinner-border-sm {
+    width: 1rem;
+    height: 1rem;
+}
+
+/* ============================================================================
+   STATUS DOTS
+   ============================================================================ */
+
+.status-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 0.5rem;
+    flex-shrink: 0;
+}
+
+.status-dot.active   { background: var(--success); box-shadow: 0 0 8px var(--success); }
+.status-dot.error    { background: var(--critical); box-shadow: 0 0 8px var(--critical); }
+.status-dot.scanning {
+    background: var(--warning);
+    box-shadow: 0 0 8px var(--warning);
+    animation: dot-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes dot-pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50%       { opacity: 0.5; transform: scale(0.85); }
+}
+
+/* ============================================================================
+   SECTION DIVIDERS & DECORATORS
+   ============================================================================ */
+
+.section-divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--redcon-border), transparent);
+    margin: 2rem 0;
+}
+
+.redcon-divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--redcon-primary), transparent);
+    margin: 2rem 0;
+    opacity: 0.4;
+}
+
+/* Pill separator */
+.separator-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--redcon-text-muted);
+    padding: 0.25rem 0.75rem;
+    background: var(--redcon-darker);
+    border: 1px solid var(--redcon-border);
+    border-radius: 99px;
+}
+
+/* ============================================================================
+   UTILITIES
+   ============================================================================ */
+
+.text-redcon          { color: var(--redcon-primary) !important; }
+.text-muted           { color: var(--redcon-text-secondary) !important; }
+.text-very-muted      { color: var(--redcon-text-muted) !important; }
+.bg-redcon            { background: var(--redcon-primary) !important; }
+.bg-redcon-subtle     { background: rgba(201,53,63,0.08) !important; }
+.border-redcon        { border-color: var(--redcon-primary) !important; }
+.font-mono            { font-family: 'JetBrains Mono', monospace !important; }
+
+/* Selection highlight */
+::selection      { background: var(--redcon-primary); color: #fff; }
+::-moz-selection { background: var(--redcon-primary); color: #fff; }
+
+/* ============================================================================
+   ANIMATIONS
+   ============================================================================ */
+
+.fade-in {
+    animation: fadeIn 0.4s ease-out both;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+.slide-up {
+    animation: slideUp 0.45s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+@keyframes slideUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.slide-in-right {
+    animation: slideInRight 0.35s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+@keyframes slideInRight {
+    from { opacity: 0; transform: translateX(20px); }
+    to   { opacity: 1; transform: translateX(0); }
+}
+
+/* Staggered children */
+.stagger-children > * {
+    animation: slideUp 0.4s cubic-bezier(0.4,0,0.2,1) both;
+}
+.stagger-children > *:nth-child(1) { animation-delay: 0.05s; }
+.stagger-children > *:nth-child(2) { animation-delay: 0.10s; }
+.stagger-children > *:nth-child(3) { animation-delay: 0.15s; }
+.stagger-children > *:nth-child(4) { animation-delay: 0.20s; }
+.stagger-children > *:nth-child(5) { animation-delay: 0.25s; }
+.stagger-children > *:nth-child(6) { animation-delay: 0.30s; }
+
+/* ============================================================================
+   MARKDOWN CONTENT
+   ============================================================================ */
+
+.markdown-content {
+    color: var(--redcon-text);
+    line-height: 1.75;
+    font-size: 0.9rem;
+}
+
+.markdown-content h1, .markdown-content h2, .markdown-content h3 {
+    color: var(--redcon-text);
+    margin-top: 1.5rem;
+    margin-bottom: 0.75rem;
+}
+
+.markdown-content code {
+    background: rgba(201,53,63,0.08);
+    color: var(--redcon-accent);
+    font-size: 0.875em;
+}
+
+.markdown-content pre {
+    background: var(--redcon-darker);
+    border-left: 3px solid var(--redcon-primary);
+}
+
+.markdown-content blockquote {
+    border-left: 4px solid var(--redcon-primary);
+    background: rgba(201,53,63,0.04);
+    padding: 1rem 1.25rem;
+    margin: 1rem 0;
+    border-radius: 0 8px 8px 0;
+    color: var(--redcon-text-secondary);
+}
+
+.markdown-content a {
+    color: var(--redcon-primary);
+    text-decoration: underline;
+    text-decoration-color: rgba(201,53,63,0.4);
+}
+
+.markdown-content a:hover {
+    color: var(--redcon-primary-hover);
+    text-decoration-color: var(--redcon-primary-hover);
+}
+
+.markdown-content ul, .markdown-content ol {
+    padding-left: 1.5rem;
+}
+
+.markdown-content li { margin-bottom: 0.35rem; }
+
+/* ============================================================================
+   SELECT2 INTEGRATION
+   ============================================================================ */
+
+.select2-container--bootstrap-5 .select2-selection {
+    background: var(--redcon-darker) !important;
+    border-color: var(--redcon-border) !important;
+    color: var(--redcon-text) !important;
+    border-radius: 8px !important;
+    min-height: 40px !important;
+}
+
+.select2-container--bootstrap-5 .select2-selection--multiple .select2-selection__choice {
+    background: rgba(201,53,63,0.12) !important;
+    border-color: var(--redcon-primary) !important;
+    color: var(--redcon-text) !important;
+    border-radius: 6px !important;
+    font-size: 0.8rem !important;
+}
+
+.select2-container--bootstrap-5 .select2-selection--multiple .select2-selection__choice__remove {
+    color: var(--redcon-primary) !important;
+}
+
+.select2-dropdown {
+    background: var(--redcon-card) !important;
+    border-color: var(--redcon-border) !important;
+    border-radius: 10px !important;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.6) !important;
+}
+
+.select2-container--bootstrap-5 .select2-results__option {
+    background: var(--redcon-card) !important;
+    color: var(--redcon-text) !important;
+    font-size: 0.875rem;
+    padding: 0.5rem 0.875rem;
+}
+
+.select2-container--bootstrap-5 .select2-results__option--highlighted {
+    background: var(--redcon-card-hover) !important;
+    color: var(--redcon-primary) !important;
+}
+
+.select2-container--bootstrap-5 .select2-search--dropdown .select2-search__field {
+    background: var(--redcon-darker) !important;
+    border-color: var(--redcon-border) !important;
+    color: var(--redcon-text) !important;
+    border-radius: 6px !important;
+}
+
+/* ============================================================================
+   ACCESSIBILITY
+   ============================================================================ */
+
+*:focus-visible {
+    outline: 2px solid var(--redcon-primary);
+    outline-offset: 3px;
+    border-radius: 4px;
+}
+
+.btn:focus-visible {
+    box-shadow: 0 0 0 3px rgba(201,53,63,0.35);
+}
+
+/* Skip to content */
+.skip-link {
+    position: absolute;
+    top: -100%;
+    left: 1rem;
+    background: var(--redcon-primary);
+    color: #fff;
+    padding: 0.5rem 1rem;
+    border-radius: 0 0 8px 8px;
+    font-weight: 600;
+    z-index: 9999;
+    transition: top 0.2s ease;
+}
+
+.skip-link:focus {
+    top: 0;
+}
+
+/* ============================================================================
+   PRINT STYLES
+   ============================================================================ */
+
+@media print {
+    body {
+        background: #fff !important;
+        color: #000 !important;
+        background-image: none !important;
+    }
+    body::before { display: none; }
+    .navbar, .btn, .redcon-brand, .no-print { display: none !important; }
+    .card {
+        border: 1px solid #ccc !important;
+        box-shadow: none !important;
+        break-inside: avoid;
+    }
+}
+
+/* ============================================================================
+   RESPONSIVE
+   ============================================================================ */
+
+@media (max-width: 768px) {
+    .redcon-logo    { font-size: 1.75rem; }
+    .redcon-tagline { font-size: 0.8rem; }
+    .redcon-motto   { font-size: 0.65rem; }
+    .stats-number   { font-size: 2rem; }
+    .main-content   { padding: 1rem; }
+    h1              { font-size: 1.5rem; }
+}
+
+@media (max-width: 576px) {
+    .redcon-logo    { font-size: 1.4rem; letter-spacing: 0.12em; }
+    .stats-number   { font-size: 1.75rem; }
+    h1              { font-size: 1.25rem; }
+    .card-body      { padding: 1rem; }
+}
+
+/* ============================================================================
+   GLOBAL DARK OVERRIDES — prevent Bootstrap white bleed
+   ============================================================================ */
+
+.bg-light     { background-color: var(--redcon-card) !important;   color: var(--redcon-text) !important; }
+.bg-white     { background-color: var(--redcon-darker) !important; }
+.text-dark    { color: var(--redcon-text) !important; }
+.text-black   { color: var(--redcon-text) !important; }
+.text-white   { color: var(--redcon-text) !important; }
+
+.list-group-item {
+    background: var(--redcon-card);
+    border-color: var(--redcon-border);
+    color: var(--redcon-text);
+}
+
+.list-group-item:hover {
+    background: var(--redcon-card-hover);
+}
+
+.list-group-item.active {
+    background: rgba(201,53,63,0.15);
+    border-color: var(--redcon-primary);
+    color: var(--redcon-primary);
+}
+
+/* Markdown content dark fix */
+.markdown-content, .markdown-content * {
+    background-color: transparent !important;
+}
+
+.markdown-content code {
+    background: rgba(201,53,63,0.08) !important;
+    color: var(--redcon-accent) !important;
+}
+
+.markdown-content pre {
+    background: var(--redcon-darker) !important;
+    color: var(--redcon-text) !important;
+}
+
+/* Confirmation boxes */
+.confirmation-item {
+    background-color: var(--redcon-card) !important;
+    color: var(--redcon-text) !important;
+    border-color: var(--redcon-border) !important;
+}
+
+/* ============================================================================
+   SMOOTH GLOBAL TRANSITIONS (non-layout properties only)
+   ============================================================================ */
+
+*, *::before, *::after {
+    transition-property: color, background-color, border-color, box-shadow, opacity, transform;
+    transition-duration: 0.2s;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Disable transition on load to avoid flash */
+.no-transition, .no-transition * {
+    transition: none !important;
+}
+
+/* ============================================================================
+   END — REDCON OFFENCE SECURITY SCANNER THEME
+   ============================================================================ */
+
+/* ============================================================================
+   DASHBOARD — New Stat Cards (dash-stat-card)
+   ============================================================================ */
+
+.dash-stat-card {
+    background: var(--redcon-card);
+    border: 1px solid var(--redcon-border);
+    border-radius: 12px;
+    padding: 1.1rem 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.dash-stat-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 12px;
+    background: linear-gradient(135deg, rgba(201,53,63,0.03) 0%, transparent 60%);
+    pointer-events: none;
+}
+
+.dash-stat-card:hover {
+    border-color: var(--redcon-border-hover);
+    box-shadow: 0 6px 24px rgba(0,0,0,0.35);
+    transform: translateY(-2px);
+}
+
+.dash-stat-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    flex-shrink: 0;
+}
+
+.dash-stat-value {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 1.75rem;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--redcon-text);
+    letter-spacing: -0.02em;
+}
+
+.dash-stat-label {
+    font-size: 0.72rem;
+    font-weight: 500;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--redcon-text-muted);
+}
+
+/* ── AI Insight Cards ── */
+
+.dash-insight-card {
+    background: var(--redcon-card);
+    border: 1px solid var(--redcon-border);
+    border-left: 3px solid var(--redcon-border);
+    border-radius: 10px;
+    padding: 1rem 1.125rem;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.dash-insight-card:hover {
+    box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+}
+
+.dash-insight-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+}
+
+.dash-insight-value {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 1.6rem;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--redcon-text);
+}
+
+.dash-insight-label {
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: var(--redcon-text-secondary);
+    margin-top: 0.1rem;
+}
+
+.dash-insight-sub {
+    font-size: 0.72rem;
+    color: var(--redcon-text-muted);
+    margin: 0.5rem 0 0;
+}
+
+/* ── Section Labels ── */
+
+.section-label {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--redcon-text-secondary);
+    display: flex;
+    align-items: center;
+}
+
+/* ── Page Title ── */
+
+.page-title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+}
+
+/* ── Project Cards ── */
+
+.project-card {
+    background: var(--redcon-card);
+    border: 1px solid var(--redcon-border);
+    border-radius: 12px;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+    overflow: hidden;
+}
+
+.project-card:hover {
+    border-color: var(--redcon-border-hover);
+    box-shadow: 0 8px 28px rgba(0,0,0,0.4);
+    transform: translateY(-2px);
+}
+
+/* ── Severity metric in project card ── */
+
+.proj-metric-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.25rem;
+    padding: 0.75rem;
+    background: rgba(13,17,23,0.4);
+    border-radius: 8px;
+}
+
+.proj-metric {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.2rem;
+}
+
+.proj-metric-val {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 1.2rem;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.proj-metric-lbl {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--redcon-text-muted);
+    font-weight: 500;
+}
+
+.sev-critical { color: #ef4444; }
+.sev-high     { color: #f97316; }
+.sev-medium   { color: #fbbf24; }
+
+/* ── Dash Progress Bar ── */
+
+.dash-progress {
+    height: 5px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 99px;
+    overflow: hidden;
+    display: flex;
+}
+
+.dash-progress-bar {
+    height: 100%;
+    transition: width 0.4s ease;
+}
+
+/* ── Status Badges ── */
+
+.badge-status {
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    padding: 0.25em 0.65em;
+    border-radius: 99px;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3em;
+    text-transform: uppercase;
+}
+
+.badge-active    { background: rgba(52,211,153,0.1); color: #34d399; border: 1px solid rgba(52,211,153,0.25); }
+.badge-scanning  { background: rgba(167,139,250,0.1); color: #a78bfa; border: 1px solid rgba(167,139,250,0.25); }
+.badge-paused,
+.badge-inactive  { background: rgba(145,152,161,0.1); color: #9198a1; border: 1px solid rgba(145,152,161,0.2); }
+.badge-completed { background: rgba(96,165,250,0.1); color: #60a5fa; border: 1px solid rgba(96,165,250,0.25); }
+
+.status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    display: inline-block;
+    flex-shrink: 0;
+}
+
+.status-dot.scanning {
+    background: #a78bfa;
+    box-shadow: 0 0 6px #a78bfa;
+    animation: pulse-dot 1.4s ease-in-out infinite;
+}
+
+@keyframes pulse-dot {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.3; }
+}
+
+/* ============================================================================
+   REDESIGNED DASHBOARD — rdb-* component system
+   ============================================================================ */
+
+/* ── Wrapper ── */
+.rdb-wrap { padding: 0.25rem 0; }
+
+/* ── Page Header ── */
+.rdb-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.75rem;
+    padding-bottom: 1.25rem;
+    border-bottom: 1px solid var(--redcon-border);
+}
+.rdb-title {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--redcon-text);
+    margin: 0 0 0.25rem;
+    letter-spacing: -0.025em;
+}
+.rdb-subtitle {
+    font-size: 0.85rem;
+    color: var(--redcon-text-muted);
+    margin: 0;
+}
+
+/* ── Hero Stat Cards ── */
+.rdb-hero-card {
+    position: relative;
+    background: var(--redcon-card);
+    border: 1px solid var(--redcon-border);
+    border-top: 3px solid var(--card-accent, #c9353f);
+    border-radius: 14px;
+    padding: 1.4rem 1.5rem 1.2rem;
+    overflow: hidden;
+    transition: transform 0.22s ease, box-shadow 0.22s ease;
+    min-height: 134px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    cursor: default;
+}
+.rdb-hero-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 16px 40px rgba(0,0,0,0.4), 0 0 0 1px var(--card-accent, #c9353f);
+}
+.rdb-hero-bg-icon {
+    position: absolute;
+    top: 1rem;
+    right: 1.2rem;
+    font-size: 3.2rem;
+    color: var(--card-accent, #c9353f);
+    opacity: 0.1;
+    line-height: 1;
+    pointer-events: none;
+}
+.rdb-hero-lbl {
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--redcon-text-muted);
+    margin-bottom: 0.4rem;
+}
+.rdb-hero-val {
+    font-size: 2.8rem;
+    font-weight: 800;
+    color: var(--card-accent, var(--redcon-text));
+    line-height: 1;
+    margin-bottom: 0.4rem;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.03em;
+}
+.rdb-hero-sub {
+    font-size: 0.75rem;
+    color: var(--redcon-text-muted);
+}
+.rdb-hero-red    { --card-accent: #c9353f; }
+.rdb-hero-crimson{ --card-accent: #ef4444; }
+.rdb-hero-orange { --card-accent: #f97316; }
+.rdb-hero-green  { --card-accent: #34d399; }
+
+/* ── Metrics Band ── */
+.rdb-band {
+    background: var(--redcon-card);
+    border: 1px solid var(--redcon-border);
+    border-radius: 12px;
+    padding: 1rem 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-evenly;
+    gap: 0.5rem;
+}
+.rdb-band-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.3rem;
+    flex: 1;
+    min-width: 0;
+}
+.rdb-band-val {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--redcon-text);
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+}
+.rdb-band-lbl {
+    font-size: 0.67rem;
+    color: var(--redcon-text-muted);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+.rdb-band-sep {
+    width: 1px;
+    height: 44px;
+    background: var(--redcon-border);
+    flex-shrink: 0;
+}
+
+/* ── AI Intelligence Panel ── */
+.rdb-intel {
+    background: var(--redcon-card);
+    border: 1px solid var(--redcon-border);
+    border-radius: 12px;
+    overflow: hidden;
+}
+.rdb-intel-header {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.75rem 1.5rem;
+    background: rgba(201,53,63,0.05);
+    border-bottom: 1px solid var(--redcon-border);
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    color: var(--redcon-text-secondary);
+}
+.rdb-intel-live {
+    background: var(--redcon-primary);
+    color: #fff;
+    font-size: 0.58rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    padding: 0.12rem 0.45rem;
+    border-radius: 4px;
+    margin-left: 0.2rem;
+    animation: rdb-pulse 2s ease-in-out infinite;
+}
+@keyframes rdb-pulse {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.55; }
+}
+.rdb-intel-body {
+    display: flex;
+    align-items: stretch;
+}
+.rdb-intel-item {
+    flex: 1;
+    padding: 1.25rem 1.5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+    transition: background 0.15s;
+}
+.rdb-intel-item:hover { background: var(--redcon-elevated); }
+.rdb-intel-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    margin-bottom: 0.5rem;
+}
+.rdb-intel-red   { background: rgba(239,68,68,0.12);   color: #ef4444; }
+.rdb-intel-green { background: rgba(52,211,153,0.12);  color: #34d399; }
+.rdb-intel-amber { background: rgba(251,191,36,0.12);  color: #fbbf24; }
+.rdb-intel-dim   { background: rgba(145,152,161,0.08); color: #9198a1; }
+.rdb-intel-num {
+    font-size: 2rem;
+    font-weight: 800;
+    line-height: 1;
+    color: var(--redcon-text);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.03em;
+}
+.rdb-intel-lbl {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--redcon-text-secondary);
+}
+.rdb-intel-desc {
+    font-size: 0.71rem;
+    color: var(--redcon-text-muted);
+}
+.rdb-intel-sep {
+    width: 1px;
+    background: var(--redcon-border);
+    margin: 1rem 0;
+    flex-shrink: 0;
+}
+
+/* ── Chart Cards ── */
+.rdb-chart-card {
+    background: var(--redcon-card);
+    border: 1px solid var(--redcon-border);
+    border-radius: 12px;
+    overflow: hidden;
+    height: 100%;
+}
+.rdb-chart-hdr {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.9rem 1.25rem;
+    border-bottom: 1px solid var(--redcon-border);
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--redcon-text-secondary);
+}
+.rdb-chart-body {
+    padding: 1rem;
+    height: 250px;
+    position: relative;
+}
+
+/* ── Section Header ── */
+.rdb-section-hdr {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    color: var(--redcon-text-muted);
+}
+.rdb-section-count {
+    background: var(--redcon-border);
+    color: var(--redcon-text-secondary);
+    font-size: 0.68rem;
+    padding: 0.1rem 0.45rem;
+    border-radius: 10px;
+    font-weight: 700;
+}
+
+/* ── Project Cards ── */
+.rdb-proj {
+    background: var(--redcon-card);
+    border: 1px solid var(--redcon-border);
+    border-left: 3px solid var(--proj-accent, #636c76);
+    border-radius: 12px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.22s ease, box-shadow 0.22s ease;
+    height: 100%;
+}
+.rdb-proj:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 28px rgba(0,0,0,0.3), 0 0 0 1px var(--proj-accent, #636c76);
+    border-color: var(--proj-accent, #636c76);
+}
+.rdb-proj-hdr {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.25rem 0.85rem;
+    border-bottom: 1px solid var(--redcon-border);
+}
+.rdb-proj-title-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+    flex: 1;
+    margin-right: 0.75rem;
+}
+.rdb-proj-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+.rdb-proj-name {
+    margin: 0;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--redcon-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Severity Grid */
+.rdb-sev-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    padding: 0.9rem 1.25rem;
+    border-bottom: 1px solid var(--redcon-border);
+    gap: 0;
+}
+.rdb-sev-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.2rem;
+    padding: 0 0.25rem;
+}
+.rdb-sev-cell + .rdb-sev-cell {
+    border-left: 1px solid var(--redcon-border);
+}
+.rdb-sev-val {
+    font-size: 1.5rem;
+    font-weight: 700;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+}
+.rdb-sev-lbl {
+    font-size: 0.64rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--redcon-text-muted);
+}
+
+/* Progress */
+.rdb-prog-wrap {
+    padding: 0.85rem 1.25rem;
+    border-bottom: 1px solid var(--redcon-border);
+}
+.rdb-prog-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.72rem;
+    color: var(--redcon-text-muted);
+    margin-bottom: 0.4rem;
+}
+.rdb-prog-track {
+    height: 6px;
+    background: rgba(255,255,255,0.06);
+    border-radius: 10px;
+    overflow: hidden;
+    display: flex;
+}
+.rdb-prog-seg { height: 100%; }
+.rdb-prog-legend {
+    display: flex;
+    gap: 1rem;
+    margin-top: 0.45rem;
+    font-size: 0.7rem;
+    color: var(--redcon-text-muted);
+}
+
+/* AI Chips */
+.rdb-ai-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    padding: 0.75rem 1.25rem;
+    border-bottom: 1px solid var(--redcon-border);
+}
+.rdb-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.71rem;
+    font-weight: 500;
+    padding: 0.2rem 0.55rem;
+    border-radius: 20px;
+    background: rgba(145,152,161,0.08);
+    color: var(--redcon-text-muted);
+    border: 1px solid var(--redcon-border);
+}
+.rdb-chip-red   { background:rgba(239,68,68,0.08);   color:#ef4444; border-color:rgba(239,68,68,0.2); }
+.rdb-chip-green { background:rgba(52,211,153,0.08);  color:#34d399; border-color:rgba(52,211,153,0.2); }
+.rdb-chip-amber { background:rgba(251,191,36,0.08);  color:#fbbf24; border-color:rgba(251,191,36,0.2); }
+
+/* Meta row */
+.rdb-proj-meta {
+    display: flex;
+    gap: 1rem;
+    padding: 0.6rem 1.25rem;
+    font-size: 0.74rem;
+    color: var(--redcon-text-muted);
+    border-bottom: 1px solid var(--redcon-border);
+}
+.rdb-proj-meta i { margin-right: 0.2rem; }
+
+/* Action buttons */
+.rdb-proj-actions {
+    display: flex;
+    gap: 0.5rem;
+    padding: 0.75rem 1.25rem;
+    margin-top: auto;
+}
+
+/* ── Empty State ── */
+.rdb-empty {
+    background: var(--redcon-card);
+    border: 1px solid var(--redcon-border);
+    border-radius: 12px;
+    padding: 4rem 2rem;
+    text-align: center;
+}
+.rdb-empty-icon {
+    width: 72px;
+    height: 72px;
+    border-radius: 16px;
+    background: rgba(201,53,63,0.08);
+    border: 1px solid rgba(201,53,63,0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1.5rem;
+    font-size: 2rem;
+    color: var(--redcon-primary);
+}
+.rdb-empty-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+.rdb-empty-desc {
+    color: var(--redcon-text-muted);
+    font-size: 0.875rem;
+    max-width: 380px;
+    margin: 0 auto 1.5rem;
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+    .rdb-band { flex-wrap: wrap; gap: 1rem; }
+    .rdb-band-sep { display: none; }
+    .rdb-band-item { flex: 0 0 calc(33.333% - 1rem); }
+    .rdb-intel-body { flex-wrap: wrap; }
+    .rdb-intel-item { flex: 0 0 50%; }
+    .rdb-intel-sep { display: none; }
+    .rdb-hero-val { font-size: 2.2rem; }
+}
+@media (max-width: 576px) {
+    .rdb-header { flex-direction: column; align-items: flex-start; gap: 1rem; }
+    .rdb-band-item { flex: 0 0 calc(50% - 1rem); }
+    .rdb-intel-item { flex: 0 0 100%; }
+}

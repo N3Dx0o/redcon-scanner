@@ -1,0 +1,198 @@
+{% extends "base.html" %}
+{% block title %}Account Settings — REDCON OFFENCE{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-7">
+            <nav aria-label="breadcrumb" class="mb-3">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for("home.index") }}">Dashboard</a></li>
+                    <li class="breadcrumb-item active">Account Settings</li>
+                </ol>
+            </nav>
+
+            {% if success %}
+            <div class="alert alert-success mb-3">
+                <i class="bi bi-check-circle me-2"></i>{{ success }}
+            </div>
+            {% endif %}
+            {% if error %}
+            <div class="alert alert-danger mb-3">
+                <i class="bi bi-exclamation-triangle me-2"></i>{{ error }}
+            </div>
+            {% endif %}
+
+            <!-- API Key Section -->
+            <div class="card mb-4">
+                <div class="card-header d-flex align-items-center gap-2">
+                    <i class="bi bi-key-fill text-redcon"></i>
+                    <span>API Key</span>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted mb-3" style="font-size:.875rem;">Use your API key to authenticate CI/CD pipelines and automated tools via the <code>X-API-Key</code> header.</p>
+
+                    <div class="mb-3" id="api-key-display">
+                        {% if current_user.api_key %}
+                        <div class="input-group">
+                            <input type="text" class="form-control font-monospace" id="api-key-value"
+                                   value="{{ current_user.api_key[:8] }}...{{ current_user.api_key[-4:] }}"
+                                   data-full="{{ current_user.api_key }}" readonly style="background:#161b22;color:#f0f3f6;border-color:var(--redcon-border);">
+                            <button class="btn btn-outline-secondary" type="button" onclick="copyApiKey()" title="Copy full key">
+                                <i class="bi bi-clipboard"></i>
+                            </button>
+                        </div>
+                        <small class="text-muted">Key generated - click copy to get the full key</small>
+                        {% else %}
+                        <p class="text-muted mb-0">No API key generated yet.</p>
+                        {% endif %}
+                    </div>
+
+                    <div class="d-flex gap-2 flex-wrap">
+                        <button class="btn btn-primary" id="btn-generate" onclick="generateApiKey()">
+                            <i class="bi bi-arrow-clockwise me-1"></i>
+                            {% if current_user.api_key %}Regenerate Key{% else %}Generate Key{% endif %}
+                        </button>
+                        {% if current_user.api_key %}
+                        <button class="btn btn-outline-danger" id="btn-revoke" onclick="revokeApiKey()">
+                            <i class="bi bi-trash me-1"></i>Revoke Key
+                        </button>
+                        {% endif %}
+                    </div>
+
+                    <input type="hidden" id="csrf-token-holder" name="csrf_token" value="{{ csrf_token() }}">
+
+                    <!-- GitHub Actions Example -->
+                    <div class="mt-4">
+                        <h6 class="text-muted" style="font-size:.8rem;text-transform:uppercase;letter-spacing:.05em;">GitHub Actions Example</h6>
+                        <pre style="background:#161b22;border:1px solid var(--redcon-border);border-radius:8px;padding:16px;font-size:.8rem;overflow-x:auto;"><code>- name: Trigger REDCON Scan
+  run: |
+    curl -X POST https://scanner.redconoffence.com/api/projects/YOUR_PROJECT_ID/scan-complete       -H "X-API-Key: ${{ secrets.REDCON_API_KEY }}"       -H "Content-Type: application/json"</code></pre>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Notification Preferences -->
+            <div class="card mb-4">
+                <div class="card-header d-flex align-items-center gap-2">
+                    <i class="bi bi-bell-fill text-redcon"></i>
+                    <span>Notification Preferences</span>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for("auth.update_notifications") }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                        <div class="form-check form-switch mb-3">
+                            <input class="form-check-input" type="checkbox" id="notify_scan_complete" name="notify_scan_complete"
+                                   {% if current_user.notify_scan_complete %}checked{% endif %}>
+                            <label class="form-check-label" for="notify_scan_complete">
+                                <strong>Scan Complete</strong>
+                                <div class="text-muted" style="font-size:.8rem;">Email me when a scan finishes with summary of findings</div>
+                            </label>
+                        </div>
+
+                        <div class="form-check form-switch mb-4">
+                            <input class="form-check-input" type="checkbox" id="notify_critical" name="notify_critical_findings"
+                                   {% if current_user.notify_critical_findings %}checked{% endif %}>
+                            <label class="form-check-label" for="notify_critical">
+                                <strong>Critical Findings</strong>
+                                <div class="text-muted" style="font-size:.8rem;">Email me immediately when a critical severity finding is detected</div>
+                            </label>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-lg me-1"></i>Save Preferences
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Change Password -->
+            <div class="card mb-4">
+                <div class="card-header d-flex align-items-center gap-2">
+                    <i class="bi bi-lock-fill text-redcon"></i>
+                    <span>Change Password</span>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for("auth.change_password") }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <div class="mb-3">
+                            <label class="form-label">Current Password</label>
+                            <input type="password" class="form-control" name="current_password" required autocomplete="current-password">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">New Password</label>
+                            <input type="password" class="form-control" name="new_password" required autocomplete="new-password">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Confirm New Password</label>
+                            <input type="password" class="form-control" name="confirm_password" required autocomplete="new-password">
+                        </div>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-key me-1"></i>Update Password
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+function copyApiKey() {
+    const input = document.getElementById("api-key-value");
+    const full = input.dataset.full;
+    navigator.clipboard.writeText(full).then(() => {
+        const btn = input.nextElementSibling;
+        btn.innerHTML = "<i class=\"bi bi-check\"></i>";
+        setTimeout(() => { btn.innerHTML = "<i class=\"bi bi-clipboard\"></i>"; }, 2000);
+    }).catch(() => {
+        input.value = full;
+        input.select();
+        document.execCommand("copy");
+    });
+}
+
+function generateApiKey() {
+    const csrf = document.getElementById("csrf-token-holder").value;
+    fetch("/auth/settings/api-key", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": csrf
+        },
+        credentials: "same-origin"
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert("Failed to generate API key: " + (data.error || "Unknown error"));
+        }
+    })
+    .catch(err => alert("Error: " + err));
+}
+
+function revokeApiKey() {
+    if (!confirm("Are you sure you want to revoke your API key? Any integrations using it will stop working.")) return;
+    const csrf = document.getElementById("csrf-token-holder").value;
+    fetch("/auth/settings/api-key", {
+        method: "DELETE",
+        headers: {
+            "X-CSRFToken": csrf
+        },
+        credentials: "same-origin"
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert("Failed to revoke API key");
+        }
+    });
+}
+</script>
+{% endblock %}

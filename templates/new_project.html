@@ -1,0 +1,227 @@
+{% extends "base.html" %}
+
+{% block title %}New Project - Ay Fat ass {% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col s12 m10 l8 offset-m1 offset-l2">
+            <!-- Header Section -->
+            <div class="card grey darken-3">
+                <div class="card-content center-align">
+                    <div class="project-icon mb-3">
+                        <i class="material-icons">add_circle</i>
+                    </div>
+                    <h4 class="white-text mb-2">Create New Project</h4>
+                    <p class="grey-text text-lighten-2">Upload your project code and get started with security scanning</p>
+                    <div class="divider mt-3"></div>
+                </div>
+            </div>
+
+            <div class="card grey darken-3">
+                <div class="card-content">
+                    <form method="POST" enctype="multipart/form-data" id="projectForm">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <!-- File Upload Section -->
+                        <div class="mb-5">
+                            <div class="upload-area" id="uploadArea">
+                                <div class="upload-content">
+                                    <div class="upload-icon mb-4">
+                                        <i class="material-icons large">cloud_upload</i>
+                                    </div>
+                                    <h5 class="white-text mb-3">Upload Project Zip File</h5>
+                                    <p class="grey-text text-lighten-2 mb-4">Drag and drop your project zip file here, or click to browse</p>
+                                    <div class="file-field input-field">
+                                        <div class="btn waves-effect waves-light">
+                                            <i class="material-icons left">folder_open</i>Choose File
+                                            <input type="file" id="zip_file" name="zip_file" accept=".zip" required>
+                                        </div>
+                                        <div class="file-path-wrapper">
+                                            <input class="file-path validate" type="text" placeholder="No file selected">
+                                        </div>
+                                    </div>
+                                    <div class="upload-progress mt-4" id="uploadProgress" style="display: none;">
+                                        <div class="progress">
+                                            <div class="determinate"></div>
+                                        </div>
+                                        <small class="grey-text text-lighten-2">Uploading and processing file...</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row mt-3">
+                                <div class="col s12">
+                                    <div class="card-panel blue lighten-4">
+                                        <div class="row valign-wrapper mb-0">
+                                            <div class="col s1">
+                                                <i class="material-icons blue-text text-darken-2">info</i>
+                                            </div>
+                                            <div class="col s11">
+                                                <small class="blue-text text-darken-2">
+                                                    Upload a zip file containing your project code. Basic fields will be auto-populated based on the filename.
+                                                </small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Project Details -->
+                        <div class="row">
+                            <div class="col s12">
+                                <h5 class="white-text">
+                                    <i class="material-icons left">settings</i>Project Details
+                                </h5>
+                                <div class="divider mt-2 mb-4"></div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col s12 m6">
+                                <div class="input-field">
+                                    <i class="material-icons prefix">folder</i>
+                                    <input id="project_name" name="project_name" type="text" class="validate" required>
+                                    <label for="project_name">Project Name</label>
+                                </div>
+                            </div>
+                            <div class="col s12 m6">
+                                <div class="input-field">
+                                    <i class="material-icons prefix">flag</i>
+                                    <select name="status" id="status">
+                                        <option value="active" selected>Active</option>
+                                        <option value="inactive">Inactive</option>
+                                    </select>
+                                    <label>Status</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Submit Button -->
+                        <div class="row">
+                            <div class="col s12">
+                                <div class="divider mb-4"></div>
+                                <div class="center-align">
+                                    <button type="submit" class="btn-large waves-effect waves-light">
+                                        <i class="material-icons left">save</i>Create Project
+                                    </button>
+                                    <a href="{{ url_for('home.index') }}" class="btn-flat waves-effect waves-light ml-3">
+                                        <i class="material-icons left">arrow_back</i>Cancel
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Initialize MaterializeCSS components
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize selects
+        var selects = document.querySelectorAll('select');
+        M.FormSelect.init(selects);
+        
+        // Initialize file input
+        var fileInput = document.getElementById('zip_file');
+        var filePath = document.querySelector('.file-path');
+        
+        fileInput.addEventListener('change', function() {
+            if (this.files.length > 0) {
+                filePath.value = this.files[0].name;
+                M.updateTextFields();
+            }
+        });
+        
+        // Initialize textareas
+        var textareas = document.querySelectorAll('textarea');
+        M.textareaAutoResize(textareas);
+    });
+
+    // File upload handling
+    const uploadArea = document.getElementById('uploadArea');
+    const fileInput = document.getElementById('zip_file');
+    const uploadProgress = document.getElementById('uploadProgress');
+
+    // Drag and drop functionality
+    uploadArea.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        uploadArea.classList.add('dragover');
+    });
+
+    uploadArea.addEventListener('dragleave', function(e) {
+        e.preventDefault();
+        uploadArea.classList.remove('dragover');
+    });
+
+    uploadArea.addEventListener('drop', function(e) {
+        e.preventDefault();
+        uploadArea.classList.remove('dragover');
+        
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            fileInput.files = files;
+            const fileName = files[0].name;
+            const nameWithoutExt = fileName.replace('.zip', '');
+            
+            // Update file path display
+            document.querySelector('.file-path').value = fileName;
+            
+            // Auto-populate project name
+            const projectNameField = document.getElementById('project_name');
+            if (!projectNameField.value) {
+                projectNameField.value = nameWithoutExt;
+            }
+            
+            M.updateTextFields();
+        }
+    });
+
+    // Click to upload
+    uploadArea.addEventListener('click', function() {
+        fileInput.click();
+    });
+
+    // Form submission with loading state
+    document.getElementById('projectForm').addEventListener('submit', function(e) {
+        const submitBtn = this.querySelector('button[type="submit"]');
+        const originalText = submitBtn.innerHTML;
+        
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="material-icons left">hourglass_empty</i>Creating Project...';
+        
+        // Show upload progress
+        uploadProgress.style.display = 'block';
+        
+        // Simulate progress (remove this in production)
+        let progress = 0;
+        const progressBar = uploadProgress.querySelector('.determinate');
+        const interval = setInterval(() => {
+            progress += 10;
+            progressBar.style.width = progress + '%';
+            if (progress >= 100) {
+                clearInterval(interval);
+            }
+        }, 100);
+    });
+
+    // Auto-populate fields from filename
+    fileInput.addEventListener('change', function() {
+        if (this.files.length > 0) {
+            const fileName = this.files[0].name;
+            const nameWithoutExt = fileName.replace('.zip', '');
+            
+            // Auto-populate project name if empty
+            const projectNameField = document.getElementById('project_name');
+            if (!projectNameField.value) {
+                projectNameField.value = nameWithoutExt;
+                M.updateTextFields();
+            }
+        }
+    });
+</script>
+{% endblock %}

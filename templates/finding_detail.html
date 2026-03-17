@@ -1,0 +1,593 @@
+{% extends "base.html" %}
+
+{% block title %}{{ finding.title }} - Security Scanner{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-12">
+            <!-- Header -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb">
+                            <li class="breadcrumb-item"><a href="{{ url_for('home.index') }}">Projects</a></li>
+                            <li class="breadcrumb-item"><a href="{{ url_for('findings.findings_list') }}">Findings</a></li>
+                            <li class="breadcrumb-item active">{{ finding.title }}</li>
+                        </ol>
+                    </nav>
+                </div>
+                <div>
+                    <a href="{{ url_for('findings.findings_list') }}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left me-2"></i>Back to Findings
+                    </a>
+                </div>
+            </div>
+
+            <div class="row">
+                <!-- Main Content -->
+                <div class="col-lg-8">
+                    <div class="card mb-4">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h4 class="mb-0">{{ finding.title }}</h4>
+                            <div>
+                                <span class="badge severity-{{ finding.severity.value }} me-2">{{ finding.severity.value.title() }}</span>
+                                <span class="badge status-{{ finding.status.value.replace('_', '-') }}">{{ finding.status.value.replace('_', ' ').title() }}</span>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                    <strong>Project:</strong> {{ finding.project.name }}
+                                </div>
+                                <div class="col-md-6">
+                                    <strong>File:</strong> 
+                                    <code class="text-muted">{{ finding.file_path }}</code>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-4">
+                                <h6>Description</h6>
+                                <div class="border rounded p-3 bg-dark text-light markdown-content">
+                                    {{ finding.description|markdown|safe }}
+                                </div>
+                            </div>
+                            
+                            {% if finding.recommendation %}
+                            <div class="mb-4">
+                                <h6>Recommendation</h6>
+                                <div class="border rounded p-3 bg-dark text-light markdown-content">
+                                    {{ finding.recommendation|markdown|safe }}
+                                </div>
+                            </div>
+                            {% endif %}
+                            
+                            {% if finding.impacted_files and finding.impacted_files|length > 0 %}
+                            <div class="mb-4">
+                                <h6>Impacted Files</h6>
+                                <div class="border rounded p-3 bg-dark text-light">
+                                    {% for file in finding.impacted_files %}
+                                    <div class="mb-2">
+                                        <strong>{{ file.file_path }}</strong>
+                                        {% if file.lines %}
+                                        <span class="text-muted">(Lines: {{ file.lines|join(', ') }})</span>
+                                        {% endif %}
+                                        {% if file.code %}
+                                        <pre class="mt-2"><code>{{ file.code }}</code></pre>
+                                        {% endif %}
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="card-footer">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <small class="text-muted">
+                                        <i class="bi bi-calendar me-1"></i>
+                                        Created: {{ finding.created_at.strftime('%Y-%m-%d %H:%M') }}
+                                    </small>
+                                    {% if finding.resolved_at %}
+                                    <br>
+                                    <small class="text-muted">
+                                        <i class="bi bi-check-circle me-1"></i>
+                                        Resolved: {{ finding.resolved_at.strftime('%Y-%m-%d %H:%M') }}
+                                    </small>
+                                    {% endif %}
+                                </div>
+                                <div>
+                                    <button class="btn btn-outline-success btn-sm me-2" onclick="updateStatus('resolved')">
+                                        <i class="bi bi-check-circle me-1"></i>Mark Resolved
+                                    </button>
+                                    <button class="btn btn-outline-warning btn-sm me-2" onclick="updateStatus('in_progress')">
+                                        <i class="bi bi-clock me-1"></i>In Progress
+                                    </button>
+                                    <button class="btn btn-outline-secondary btn-sm" onclick="updateStatus('false_positive')">
+                                        <i class="bi bi-x-circle me-1"></i>False Positive
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Confirmations Section -->
+                    {% if finding.confirmations and finding.confirmations|length > 0 %}
+                    <div class="card mb-4">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">
+                                <i class="bi bi-robot me-2"></i>AI Confirmations
+                            </h5>
+                            <span class="badge bg-primary">{{ finding.confirmations|length }}</span>
+                        </div>
+                        <div class="card-body">
+                            {% for confirmation in finding.confirmations %}
+                            <div class="confirmation-item mb-4 pb-4 {% if not loop.last %}border-bottom{% endif %}">
+                                <div class="d-flex justify-content-between align-items-start mb-3">
+                                    <div>
+                                        <h6 class="mb-1">
+                                            <i class="bi bi-robot me-1"></i>{{ confirmation.model.model_name }}
+                                        </h6>
+                                        <small class="text-muted">{{ confirmation.model.vendor }}</small>
+                                    </div>
+                                    <div class="text-end">
+                                        {% if confirmation.false_positive %}
+                                        <span class="badge bg-warning text-dark">
+                                            <i class="bi bi-exclamation-triangle me-1"></i>False Positive
+                                        </span>
+                                        {% else %}
+                                        <span class="badge bg-success">
+                                            <i class="bi bi-check-circle me-1"></i>Confirmed
+                                        </span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                
+                                <!-- Justification -->
+                                <div class="mb-3">
+                                    <small class="text-muted d-block mb-2 fw-bold">Justification:</small>
+                                    <div class="border rounded p-3 markdown-content" style="background: var(--redcon-darker); color: var(--redcon-text);">
+                                        {{ confirmation.justification|markdown|safe }}
+                                    </div>
+                                </div>
+                                
+                                <!-- Evidence Analysis -->
+                                <div class="mb-3">
+                                    <small class="text-muted d-block mb-2 fw-bold">Evidence Analysis:</small>
+                                    <div class="border rounded p-3 markdown-content" style="background: var(--redcon-darker); color: var(--redcon-text);">
+                                        {{ confirmation.evidence_analysis|markdown|safe }}
+                                    </div>
+                                </div>
+                                
+                                <!-- Exploit Feasibility -->
+                                <div class="mb-3">
+                                    <small class="text-muted d-block mb-2 fw-bold">Exploit Feasibility:</small>
+                                    <div class="border rounded p-3 markdown-content" style="background: var(--redcon-darker); color: var(--redcon-text);">
+                                        {{ confirmation.exploit_feasibility|markdown|safe }}
+                                    </div>
+                                </div>
+                                
+                                <!-- Additional Details -->
+                                <div class="d-flex gap-3 mt-2">
+                                    {% if confirmation.is_remote_attack %}
+                                    <span class="badge bg-danger">
+                                        <i class="bi bi-globe me-1"></i>Remote Attack
+                                    </span>
+                                    {% endif %}
+                                    <small class="text-muted ms-auto">
+                                        <i class="bi bi-clock me-1"></i>{{ confirmation.created_at.strftime('%Y-%m-%d %H:%M') }}
+                                    </small>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Sidebar -->
+                <div class="col-lg-4">
+                    <!-- Status Update -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h6 class="mb-0">Update Status</h6>
+                        </div>
+                        <div class="card-body">
+                            <form id="statusForm">
+                                <div class="mb-3">
+                                    <label for="statusSelect" class="form-label">Status</label>
+                                    <select class="form-select" id="statusSelect">
+                                        <option value="open" {% if finding.status.value == 'open' %}selected{% endif %}>Open</option>
+                                        <option value="in_progress" {% if finding.status.value == 'in_progress' %}selected{% endif %}>In Progress</option>
+                                        <option value="resolved" {% if finding.status.value == 'resolved' %}selected{% endif %}>Resolved</option>
+                                        <option value="false_positive" {% if finding.status.value == 'false_positive' %}selected{% endif %}>False Positive</option>
+                                        <option value="ignored" {% if finding.status.value == 'ignored' %}selected{% endif %}>Ignored</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="justification" class="form-label">Justification</label>
+                                    <textarea class="form-control" id="justification" rows="3" placeholder="Optional justification for status change"></textarea>
+                                </div>
+                                <button type="submit" class="btn btn-primary btn-sm w-100">
+                                    <i class="bi bi-save me-1"></i>Update Status
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Finding Info -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h6 class="mb-0">Finding Information</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <strong>Severity:</strong>
+                                <span class="badge severity-{{ finding.severity.value }} ms-2">{{ finding.severity.value.title() }}</span>
+                            </div>
+                            <div class="mb-3">
+                                <strong>Status:</strong>
+                                <span class="badge status-{{ finding.status.value.replace('_', '-') }} ms-2">{{ finding.status.value.replace('_', ' ').title() }}</span>
+                            </div>
+                            <div class="mb-3">
+                                <strong>Project:</strong>
+                                <div class="text-muted">{{ finding.project.name }}</div>
+                            </div>
+                            <div class="mb-3">
+                                <strong>File Path:</strong>
+                                <div class="text-muted">
+                                    <code>{{ finding.file_path }}</code>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <strong>Created:</strong>
+                                <div class="text-muted">{{ finding.created_at.strftime('%Y-%m-%d %H:%M') }}</div>
+                            </div>
+                            {% if finding.resolved_at %}
+                            <div class="mb-3">
+                                <strong>Resolved:</strong>
+                                <div class="text-muted">{{ finding.resolved_at.strftime('%Y-%m-%d %H:%M') }}</div>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Confirmation Summary -->
+                    {% if finding.confirmations and finding.confirmations|length > 0 %}
+                    <div class="card mb-4">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h6 class="mb-0">
+                                <i class="bi bi-robot me-2"></i>Confirmations Summary
+                            </h6>
+                            <span class="badge bg-primary">{{ finding.confirmations|length }}</span>
+                        </div>
+                        <div class="card-body">
+                            {% set confirmed_count = finding.confirmations | selectattr('false_positive', 'equalto', False) | list | length %}
+                            {% set false_positive_count = finding.confirmations | selectattr('false_positive', 'equalto', True) | list | length %}
+                            {% set remote_attack_count = finding.confirmations | selectattr('is_remote_attack', 'equalto', True) | list | length %}
+                            
+                            <div class="mb-3">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <span class="text-muted">Confirmed:</span>
+                                    <span class="badge bg-success">{{ confirmed_count }}</span>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <span class="text-muted">False Positives:</span>
+                                    <span class="badge bg-warning text-dark">{{ false_positive_count }}</span>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <span class="text-muted">Remote Attacks:</span>
+                                    <span class="badge bg-danger">{{ remote_attack_count }}</span>
+                                </div>
+                            </div>
+                            
+                            <hr>
+                            
+                            <div class="small">
+                                <strong class="d-block mb-2">Confirmed by:</strong>
+                                {% for confirmation in finding.confirmations %}
+                                <div class="d-flex align-items-center mb-2">
+                                    <i class="bi bi-robot me-2"></i>
+                                    <div class="flex-grow-1">
+                                        <div class="fw-bold">{{ confirmation.model.model_name }}</div>
+                                        <small class="text-muted">{{ confirmation.model.vendor }}</small>
+                                    </div>
+                                    {% if confirmation.false_positive %}
+                                    <span class="badge bg-warning text-dark">
+                                        <i class="bi bi-exclamation-triangle"></i>
+                                    </span>
+                                    {% else %}
+                                    <span class="badge bg-success">
+                                        <i class="bi bi-check-circle"></i>
+                                    </span>
+                                    {% endif %}
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Actions -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="mb-0">Actions</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="d-grid gap-2">
+                                <button class="btn btn-primary btn-sm" onclick="openConfirmModal()">
+                                    <i class="bi bi-robot me-1"></i>Confirm Finding
+                                </button>
+                                <a href="{{ url_for('projects.view_project', project_id=finding.project.id) }}" class="btn btn-outline-secondary btn-sm">
+                                    <i class="bi bi-folder me-1"></i>View Project
+                                </a>
+                                <button class="btn btn-outline-danger btn-sm" onclick="deleteFinding()">
+                                    <i class="bi bi-trash me-1"></i>Delete Finding
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Confirm Finding Modal -->
+<div class="modal fade" id="confirmFindingModal" tabindex="-1" aria-labelledby="confirmFindingModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="confirmFindingModalLabel">
+                    <i class="bi bi-robot me-2"></i>Start Finding Validation
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="modelSelect" class="form-label">Select AI Model</label>
+                    <select class="form-select" id="modelSelect" style="width: 100%;">
+                        <option></option>
+                    </select>
+                    <div class="form-text">Choose an AI model to validate this finding in background</div>
+                </div>
+                
+                <div class="alert alert-info" role="alert">
+                    <i class="bi bi-info-circle me-2"></i>
+                    <strong>Background Validation:</strong> The validation process will run in the background. You can monitor its progress on the <a href="/status">Status page</a>.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="generateCommandBtn" onclick="generateCommand()">
+                    <i class="bi bi-play-circle me-1"></i>Start Validation
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+let modelsData = [];
+
+function updateStatus(status) {
+    const findingId = {{ finding.id }};
+    
+    fetch(`/api/findings/${findingId}/status`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status: status })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            window.location.reload();
+        } else {
+            alert('Error updating status: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error updating status');
+    });
+}
+
+function openConfirmModal() {
+    // Load AI models
+    fetch('/api/ai-models')
+        .then(response => response.json())
+        .then(data => {
+            modelsData = data.models || [];
+            const modelSelect = document.getElementById('modelSelect');
+            modelSelect.innerHTML = '<option></option>';
+            
+            modelsData.forEach(model => {
+                const option = document.createElement('option');
+                option.value = model.id;
+                option.textContent = `${model.vendor}/${model.model_name} (${model.api_key_suffix})`;
+                modelSelect.appendChild(option);
+            });
+            
+            // Initialize Select2 with Bootstrap 5 theme
+            $('#modelSelect').select2({
+                placeholder: "Select an AI model",
+                allowClear: true,
+                width: '100%',
+                theme: 'bootstrap-5'
+            });
+            
+            // Show modal
+            const modal = new bootstrap.Modal(document.getElementById('confirmFindingModal'));
+            modal.show();
+        })
+        .catch(error => {
+            console.error('Error loading AI models:', error);
+            alert('Error loading AI models');
+        });
+}
+
+async function generateCommand() {
+    const modelId = document.getElementById('modelSelect').value;
+    const findingId = {{ finding.id }};
+    
+    if (!modelId) {
+        alert('Please select an AI model first');
+        return;
+    }
+    
+    // Find the selected model
+    const model = modelsData.find(m => m.id == modelId);
+    
+    // Disable button while checking
+    const generateBtn = document.getElementById('generateCommandBtn');
+    const originalBtnHtml = generateBtn.innerHTML;
+    generateBtn.disabled = true;
+    generateBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Checking...';
+    
+    try {
+        // Check if confirmation already exists for this finding + model
+        const checkResponse = await fetch(`/api/findings/${findingId}/check-confirmation/${modelId}`);
+        const checkData = await checkResponse.json();
+        
+        if (!checkData.success) {
+            alert('Error checking confirmation: ' + checkData.error);
+            generateBtn.disabled = false;
+            generateBtn.innerHTML = originalBtnHtml;
+            return;
+        }
+        
+        // If confirmation exists, ask user if they want to re-validate
+        if (checkData.exists) {
+            const confirmation = checkData.confirmation;
+            const reValidate = confirm(
+                `A confirmation already exists for this finding from model "${model.model_name}".\n\n` +
+                `Previous validation:\n` +
+                `- False Positive: ${confirmation.false_positive ? 'Yes' : 'No'}\n` +
+                `- Remote Attack: ${confirmation.is_remote_attack ? 'Yes' : 'No'}\n` +
+                `- Created: ${new Date(confirmation.created_at).toLocaleString()}\n\n` +
+                `Do you want to validate it again?`
+            );
+            
+            if (!reValidate) {
+                generateBtn.disabled = false;
+                generateBtn.innerHTML = originalBtnHtml;
+                return;
+            }
+        }
+        
+        // Start validation in background
+        generateBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Starting Validation...';
+        
+        const startResponse = await fetch(`/api/findings/${findingId}/start-validation`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ model_id: modelId })
+        });
+        
+        const startData = await startResponse.json();
+        
+        if (!startData.success) {
+            alert('Error starting validation: ' + startData.error);
+            generateBtn.disabled = false;
+            generateBtn.innerHTML = originalBtnHtml;
+            return;
+        }
+        
+        // Check if already running
+        if (startData.already_running) {
+            alert('Validation is already running for this finding and model!\n\n' + startData.output);
+            generateBtn.disabled = false;
+            generateBtn.innerHTML = originalBtnHtml;
+            return;
+        }
+        
+        // Success! Show success message and redirect to status page
+        alert(`Validation started successfully!\n\nProcess ID: ${startData.pid}\nLog file: ${startData.log_file}\n\nRedirecting to status page...`);
+        
+        // Close modal
+        const modal = bootstrap.Modal.getInstance(document.getElementById('confirmFindingModal'));
+        if (modal) {
+            modal.hide();
+        }
+        
+        // Redirect to status page
+        window.location.href = '/status';
+        
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Error starting validation: ' + error.message);
+        generateBtn.disabled = false;
+        generateBtn.innerHTML = originalBtnHtml;
+    }
+}
+
+// Reset modal when closed
+document.getElementById('confirmFindingModal').addEventListener('hidden.bs.modal', function() {
+    document.getElementById('modelSelect').value = '';
+    $('#modelSelect').val(null).trigger('change');
+    document.getElementById('generateCommandBtn').disabled = false;
+    document.getElementById('generateCommandBtn').innerHTML = '<i class="bi bi-play-circle me-1"></i>Start Validation';
+});
+
+// Status form submission
+document.getElementById('statusForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const findingId = {{ finding.id }};
+    const status = document.getElementById('statusSelect').value;
+    const justification = document.getElementById('justification').value;
+    
+    fetch(`/api/findings/${findingId}/status`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+            status: status,
+            justification: justification
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            window.location.reload();
+        } else {
+            alert('Error updating status: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error updating status');
+    });
+});
+
+function deleteFinding() {
+    if (confirm('Are you sure you want to delete this finding? This action cannot be undone.')) {
+        const findingId = {{ finding.id }};
+        
+        fetch(`/api/findings/${findingId}`, {
+            method: 'DELETE'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                window.location.href = '{{ url_for("findings.findings_list") }}';
+            } else {
+                alert('Error deleting finding: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error deleting finding');
+        });
+    }
+}
+</script>
+{% endblock %}

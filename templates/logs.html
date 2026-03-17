@@ -1,0 +1,350 @@
+{% extends "base.html" %}
+{% block title %}Logs - Security Scanner{% endblock %}
+
+{% block styles %}
+<style>
+.log-card { transition: all 0.2s ease; cursor: pointer; }
+.log-card:hover { transform: translateY(-2px); border-color: #c9353f !important; }
+.log-card.selected { border-color: #c9353f !important; background-color: rgba(201,53,63,0.08); }
+.log-viewer {
+    background-color: #0d1117; border: 1px solid var(--redcon-border);
+    border-radius: 8px; font-family: 'JetBrains Mono','Fira Code','Consolas',monospace;
+    font-size: 0.8rem; line-height: 1.5; max-height: 600px; overflow-y: auto;
+    padding: 1rem; white-space: pre-wrap; word-wrap: break-word;
+}
+.log-viewer .log-line { padding: 2px 0; }
+.log-viewer .log-line:hover { background-color: rgba(255,255,255,0.04); }
+.log-viewer .error-line   { color: #ff6b6b; }
+.log-viewer .warning-line { color: #ffc107; }
+.log-viewer .info-line    { color: #0dcaf0; }
+.log-viewer .success-line { color: #34d399; }
+.stats-mini { font-size:.85rem; padding:.4rem 1rem; border-radius:6px; background:rgba(255,255,255,.04); border:1px solid var(--redcon-border); }
+.filter-btn.active { background-color:#c9353f; border-color:#c9353f; color:#fff; }
+.empty-state { padding:3rem; text-align:center; color:#6c757d; }
+.empty-state i { font-size:4rem; margin-bottom:1rem; opacity:.5; }
+.log-meta { font-size:.75rem; color:#6c757d; }
+.refresh-indicator { animation: rc-pulse 1s infinite; }
+@keyframes rc-pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+/* ── Native <dialog> — REDCON skin ───────────────────────────────── */
+dialog#rcDialog {
+    position: fixed !important;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    margin: 0 !important;
+    background: #161b22;
+    border: 1px solid #2d333b;
+    border-top: 3px solid #c9353f;
+    border-radius: 14px;
+    padding: 0;
+    width: 420px;
+    max-width: 92vw;
+    box-shadow: 0 24px 60px rgba(0,0,0,.7);
+    color: #e6edf3;
+    z-index: 10000 !important;
+}
+dialog#rcDialog::backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.65);
+    backdrop-filter: blur(4px);
+}
+dialog#rcDialog::backdrop {
+    background: rgba(0,0,0,.65);
+    backdrop-filter: blur(4px);
+}
+.rc-dlg-body { padding: 1.75rem 1.75rem 0; }
+.rc-dlg-icon {
+    width: 44px; height: 44px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.2rem; margin-bottom: 1rem;
+    background: rgba(201,53,63,.15); color: #c9353f;
+}
+.rc-dlg-title { font-size: 1.05rem; font-weight: 700; margin-bottom: .4rem; }
+.rc-dlg-msg   { font-size: .875rem; color: #8b949e; line-height: 1.55; }
+.rc-dlg-footer {
+    display: flex; justify-content: flex-end; gap: .6rem;
+    padding: 1.25rem 1.75rem;
+}
+.rc-btn-cancel {
+    background: transparent; border: 1px solid #444c56; color: #8b949e;
+    font-size: .875rem; padding: .45rem 1.1rem; border-radius: 8px; cursor: pointer;
+}
+.rc-btn-cancel:hover { border-color: #636c76; color: #e6edf3; }
+.rc-btn-confirm {
+    background: #c9353f; border: 1px solid #c9353f; color: #fff;
+    font-size: .875rem; padding: .45rem 1.25rem; border-radius: 8px;
+    cursor: pointer; font-weight: 600; min-width: 88px;
+}
+.rc-btn-confirm:hover { background: #a82c35; border-color: #a82c35; }
+
+/* ── Toast ─────────────────────────────────────────────────────────── */
+#rc-toasts {
+    position: fixed; bottom: 1.5rem; right: 1.5rem;
+    z-index: 9999; display: flex; flex-direction: column; gap: .6rem;
+}
+.rc-toast {
+    background: #161b22; border: 1px solid #2d333b; border-left: 4px solid #c9353f;
+    border-radius: 10px; padding: .85rem 1.2rem;
+    display: flex; align-items: center; gap: .75rem;
+    min-width: 260px; max-width: 380px;
+    box-shadow: 0 8px 30px rgba(0,0,0,.5);
+    font-size: .875rem; color: #e6edf3;
+    animation: rcIn .22s ease;
+}
+.rc-toast.success { border-left-color: #34d399; }
+.rc-toast.hiding  { animation: rcOut .22s ease forwards; }
+.rc-toast i { font-size:1.1rem; }
+.rc-toast.success i { color:#34d399; }
+.rc-toast button { background:none; border:none; color:#6c757d; cursor:pointer; margin-left:auto; }
+.rc-toast button:hover { color:#e6edf3; }
+@keyframes rcIn  { from{opacity:0;transform:translateX(24px)} to{opacity:1;transform:none} }
+@keyframes rcOut { from{opacity:1;transform:none} to{opacity:0;transform:translateX(24px)} }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1"><i class="bi bi-file-text me-2"></i>Logs Aggregator</h1>
+            <p class="text-muted mb-0">View all log files from scans, validations, and system operations</p>
+        </div>
+        <div class="d-flex gap-2 align-items-center">
+            <button class="btn btn-outline-secondary" id="refreshBtn"><i class="bi bi-arrow-clockwise me-1"></i>Refresh</button>
+            <div class="form-check form-switch d-flex align-items-center ms-2 mb-0">
+                <input class="form-check-input" type="checkbox" id="autoRefreshToggle">
+                <label class="form-check-label ms-2" for="autoRefreshToggle">Auto-refresh</label>
+            </div>
+            <button class="btn btn-outline-danger" id="clearAllBtn"><i class="bi bi-trash me-1"></i>Clear All</button>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-auto"><div class="stats-mini"><i class="bi bi-files me-2"></i><strong id="totalFilesCount">{{ total_files }}</strong> log files</div></div>
+        <div class="col-auto"><div class="stats-mini"><i class="bi bi-hdd me-2"></i><strong>{{ total_size }}</strong> total</div></div>
+        {% for type_name, count in type_counts.items() %}
+        <div class="col-auto"><div class="stats-mini"><i class="bi bi-tag me-2"></i><strong>{{ count }}</strong> {{ type_name }}</div></div>
+        {% endfor %}
+    </div>
+
+    <div class="mb-4">
+        <div class="btn-group" role="group">
+            <button type="button" class="btn btn-outline-secondary filter-btn active" data-filter="all"><i class="bi bi-grid me-1"></i>All</button>
+            <button type="button" class="btn btn-outline-primary filter-btn" data-filter="scan"><i class="bi bi-search me-1"></i>Scans</button>
+            <button type="button" class="btn btn-outline-info filter-btn" data-filter="validate"><i class="bi bi-check-circle me-1"></i>Validations</button>
+            <button type="button" class="btn btn-outline-warning filter-btn" data-filter="bulk_validate"><i class="bi bi-check2-all me-1"></i>Bulk Validations</button>
+            <button type="button" class="btn btn-outline-success filter-btn" data-filter="output"><i class="bi bi-terminal me-1"></i>System Output</button>
+            <button type="button" class="btn btn-outline-danger filter-btn" data-filter="error"><i class="bi bi-exclamation-triangle me-1"></i>Errors</button>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-5 mb-4">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span><i class="bi bi-list-ul me-2"></i>Log Files</span>
+                    <span class="badge bg-secondary" id="visibleCount">{{ total_files }}</span>
+                </div>
+                <div class="card-body p-0" style="max-height:700px;overflow-y:auto;">
+                    {% if log_files %}{% for log in log_files %}
+                    <div class="log-card p-3 border-bottom" data-path="{{ log.path }}" data-type="{{ log.type }}" onclick="viewLog('{{ log.path }}',this)">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="flex-grow-1">
+                                <div class="d-flex align-items-center mb-1">
+                                    <span class="badge bg-{{ log.type_color }} me-2">{{ log.type_label }}</span>
+                                    <span class="fw-bold text-truncate" style="max-width:200px;">{{ log.name }}</span>
+                                </div>
+                                <div class="log-meta">
+                                    <i class="bi bi-clock me-1"></i>{{ log.modified_human }}<span class="mx-2">|</span><i class="bi bi-hdd me-1"></i>{{ log.size_human }}
+                                    {% if log.project_id %}<span class="mx-2">|</span><i class="bi bi-folder me-1"></i>Project {{ log.project_id }}{% endif %}
+                                    {% if log.finding_id %}<span class="mx-2">|</span><i class="bi bi-bug me-1"></i>Finding {{ log.finding_id }}{% endif %}
+                                    {% if log.model_id %}<span class="mx-2">|</span><i class="bi bi-robot me-1"></i>Model {{ log.model_id }}{% endif %}
+                                </div>
+                            </div>
+                            <div class="btn-group btn-group-sm ms-2">
+                                <a href="/logs/download/{{ log.path }}" class="btn btn-outline-secondary" onclick="event.stopPropagation();"><i class="bi bi-download"></i></a>
+                                <button class="btn btn-outline-danger" onclick="event.stopPropagation();deleteLog('{{ log.path }}',this.closest('.log-card'))"><i class="bi bi-trash"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}{% else %}
+                    <div class="empty-state"><i class="bi bi-inbox"></i><h5>No Log Files</h5><p class="text-muted">Run a scan to generate logs.</p></div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-7">
+            <div class="card sticky-top" style="top:1rem;">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span><i class="bi bi-code-square me-2"></i><span id="viewerTitle">Select a log file to view</span></span>
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="input-group input-group-sm" style="width:auto;">
+                            <span class="input-group-text">Lines</span>
+                            <select class="form-select form-select-sm" id="tailLines" style="width:100px;">
+                                <option value="100">100</option><option value="500" selected>500</option>
+                                <option value="1000">1000</option><option value="5000">5000</option><option value="0">All</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-sm btn-outline-secondary" id="copyLogBtn" disabled><i class="bi bi-clipboard"></i></button>
+                        <button class="btn btn-sm btn-outline-secondary" id="scrollBottomBtn" disabled><i class="bi bi-arrow-down-circle"></i></button>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <div id="logViewer" class="log-viewer">
+                        <div class="empty-state text-center py-5"><i class="bi bi-file-earmark-text" style="font-size:3rem;"></i><p class="mt-3 text-muted">Click a log file to view it</p></div>
+                    </div>
+                </div>
+                <div class="card-footer py-2"><small class="text-muted"><span id="logInfo">No file loaded</span></small></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- modal injected by JS into body -->
+
+<div id="rc-toasts"></div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const CSRF = "{{ csrf_token() }}";
+
+function showConfirm(title, msg, confirmTxt) {
+    return new Promise(resolve => {
+        const overlay = document.createElement('div');
+        overlay.style.cssText = [
+            'position:fixed','top:0','left:0','width:100vw','height:100vh',
+            'background:rgba(0,0,0,0.7)','display:flex','align-items:center',
+            'justify-content:center','z-index:999999'
+        ].join(';');
+
+        const box = document.createElement('div');
+        box.style.cssText = [
+            'background:#161b22','border:1px solid #2d333b','border-top:3px solid #c9353f',
+            'border-radius:14px','width:420px','max-width:92vw',
+            'box-shadow:0 24px 60px rgba(0,0,0,0.8)','color:#e6edf3',
+            'font-family:Inter,sans-serif','overflow:hidden'
+        ].join(';');
+
+        box.innerHTML =
+            '<div style="padding:1.75rem 1.75rem 1.25rem">' +
+                '<div style="width:44px;height:44px;border-radius:50%;background:rgba(201,53,63,.15);color:#c9353f;display:flex;align-items:center;justify-content:center;font-size:1.2rem;margin-bottom:1rem"><i class="bi bi-exclamation-triangle"></i></div>' +
+                '<div style="font-size:1.05rem;font-weight:700;margin-bottom:.4rem">' + title + '</div>' +
+                '<div style="font-size:.875rem;color:#8b949e;line-height:1.55">' + msg + '</div>' +
+            '</div>' +
+            '<div style="display:flex;justify-content:flex-end;gap:.6rem;padding:1rem 1.75rem;border-top:1px solid #2d333b">' +
+                '<button id="_rcCancel" style="background:transparent;border:1px solid #444c56;color:#8b949e;font-size:.875rem;padding:.45rem 1.1rem;border-radius:8px;cursor:pointer">Cancel</button>' +
+                '<button id="_rcConfirm" style="background:#c9353f;border:1px solid #c9353f;color:#fff;font-size:.875rem;font-weight:600;padding:.45rem 1.25rem;border-radius:8px;cursor:pointer;min-width:88px">' + (confirmTxt||'Confirm') + '</button>' +
+            '</div>';
+
+        overlay.appendChild(box);
+        document.body.appendChild(overlay);
+
+        function done(val) { document.body.removeChild(overlay); resolve(val); }
+        box.querySelector('#_rcConfirm').onclick = () => done(true);
+        box.querySelector('#_rcCancel').onclick  = () => done(false);
+        overlay.addEventListener('click', e => { if(e.target===overlay) done(false); });
+    });
+}
+
+function showToast(msg, type) {
+    const c = document.getElementById('rc-toasts');
+    const t = document.createElement('div');
+    const icon = type==='success' ? 'bi-check-circle-fill' : 'bi-x-circle-fill';
+    t.className = 'rc-toast ' + (type||'danger');
+    t.innerHTML = '<i class="bi '+icon+'"></i><span>'+msg+'</span><button onclick="this.parentElement.remove()"><i class="bi bi-x"></i></button>';
+    c.appendChild(t);
+    setTimeout(()=>{ t.classList.add('hiding'); t.addEventListener('animationend',()=>t.remove(),{once:true}); }, 4000);
+}
+
+let currentLogPath = null, autoTimer = null;
+
+document.querySelectorAll('.filter-btn').forEach(btn => btn.addEventListener('click', function() {
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    this.classList.add('active');
+    const f = this.dataset.filter; let n=0;
+    document.querySelectorAll('.log-card').forEach(c => { const show=f==='all'||c.dataset.type===f; c.style.display=show?'':'none'; if(show)n++; });
+    document.getElementById('visibleCount').textContent = n;
+}));
+
+function viewLog(path, el) {
+    document.querySelectorAll('.log-card').forEach(c=>c.classList.remove('selected'));
+    if(el) el.classList.add('selected');
+    currentLogPath = path;
+    const tail = document.getElementById('tailLines').value;
+    document.getElementById('viewerTitle').innerHTML = '<span class="refresh-indicator"><i class="bi bi-arrow-clockwise me-1"></i></span>Loading...';
+    fetch('/logs/view/'+path+'?tail='+tail)
+        .then(r=>r.json()).then(data=>{
+            if(data.success){
+                const v = document.getElementById('logViewer');
+                v.innerHTML = escapeHtml(data.content).split('\n').map(line=>{
+                    const l=line.toLowerCase(); let cls='';
+                    if(l.includes('error')||l.includes('exception')||l.includes('failed')) cls='error-line';
+                    else if(l.includes('warning')||l.includes('warn')) cls='warning-line';
+                    else if(l.includes('success')||l.includes('completed')||l.includes('✓')) cls='success-line';
+                    else if(l.includes('info')||l.includes('starting')) cls='info-line';
+                    return '<div class="log-line '+cls+'">'+line+'</div>';
+                }).join('') || '<div class="text-muted text-center py-3">File is empty</div>';
+                const tr = data.truncated?' (showing last '+data.displayed_lines+' of '+data.total_lines+' lines)':'';
+                document.getElementById('logInfo').textContent     = path+' | '+data.size+' | Modified: '+data.modified+tr;
+                document.getElementById('viewerTitle').textContent = path.split('/').pop();
+                document.getElementById('copyLogBtn').disabled = document.getElementById('scrollBottomBtn').disabled = false;
+            } else {
+                document.getElementById('logViewer').innerHTML = '<div class="text-danger text-center py-3">Error: '+data.error+'</div>';
+                document.getElementById('viewerTitle').textContent='Error loading log';
+            }
+        }).catch(err=>{
+            document.getElementById('logViewer').innerHTML='<div class="text-danger text-center py-3">'+err.message+'</div>';
+            document.getElementById('viewerTitle').textContent='Error';
+        });
+}
+
+function escapeHtml(t){ const d=document.createElement('div'); d.textContent=t; return d.innerHTML; }
+
+async function deleteLog(path, cardEl) {
+    const ok = await showConfirm('Delete Log File', 'Delete "'+path.split('/').pop()+'"? This cannot be undone.', 'Delete');
+    if(!ok) return;
+    const res  = await fetch('/logs/delete/'+path, {method:'POST',headers:{'X-CSRFToken':CSRF}});
+    const data = await res.json();
+    if(data.success){
+        if(cardEl) cardEl.remove();
+        if(currentLogPath===path){
+            document.getElementById('logViewer').innerHTML='<div class="empty-state text-center py-5"><i class="bi bi-file-earmark-text" style="font-size:3rem;"></i><p class="mt-3 text-muted">File deleted</p></div>';
+            document.getElementById('viewerTitle').textContent='Select a log file to view';
+            currentLogPath=null;
+        }
+        document.getElementById('totalFilesCount').textContent = document.querySelectorAll('.log-card').length;
+        document.getElementById('visibleCount').textContent    = document.querySelectorAll('.log-card:not([style*="none"])').length;
+        showToast('Log file deleted.','success');
+    } else { showToast('Error: '+data.error,'danger'); }
+}
+
+document.getElementById('clearAllBtn').addEventListener('click', async function() {
+    const ok = await showConfirm('Clear All Logs','Delete ALL log files permanently? This cannot be undone.','Clear All');
+    if(!ok) return;
+    this.disabled=true; this.innerHTML='<i class="bi bi-hourglass-split me-1"></i>Clearing...';
+    try {
+        const res=await fetch('/logs/clear-all',{method:'POST',headers:{'X-CSRFToken':CSRF}});
+        const data=await res.json();
+        if(data.success){ showToast(data.message,'success'); setTimeout(()=>location.reload(),1200); }
+        else { showToast('Error: '+data.error,'danger'); this.disabled=false; this.innerHTML='<i class="bi bi-trash me-1"></i>Clear All'; }
+    } catch(e){ showToast('Network error: '+e.message,'danger'); this.disabled=false; this.innerHTML='<i class="bi bi-trash me-1"></i>Clear All'; }
+});
+
+document.getElementById('refreshBtn').addEventListener('click',()=>location.reload());
+document.getElementById('autoRefreshToggle').addEventListener('change',function(){
+    if(this.checked){ autoTimer=setInterval(()=>{ if(currentLogPath) viewLog(currentLogPath,document.querySelector('.log-card[data-path="'+currentLogPath+'"]')); },3000); }
+    else { clearInterval(autoTimer); autoTimer=null; }
+});
+document.getElementById('tailLines').addEventListener('change',function(){ if(currentLogPath) viewLog(currentLogPath,document.querySelector('.log-card[data-path="'+currentLogPath+'"]')); });
+document.getElementById('copyLogBtn').addEventListener('click',function(){
+    navigator.clipboard.writeText(document.getElementById('logViewer').innerText).then(()=>{ this.innerHTML='<i class="bi bi-check"></i>'; setTimeout(()=>this.innerHTML='<i class="bi bi-clipboard"></i>',2000); });
+});
+document.getElementById('scrollBottomBtn').addEventListener('click',()=>{ const v=document.getElementById('logViewer'); v.scrollTop=v.scrollHeight; });
+
+document.addEventListener('DOMContentLoaded',()=>{ const f=document.querySelector('.log-card'); if(f) viewLog(f.dataset.path,f); });
+</script>
+{% endblock %}

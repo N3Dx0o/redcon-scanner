@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+
+{% block title %}View Logs - Security Scanner{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3 mb-1">Scan Logs</h1>
+                    <p class="text-muted mb-0">
+                        Project: <strong>{{ project_name }}</strong> (ID: {{ project_id }}) | 
+                        Model: <strong>{{ model_name }}</strong> (ID: {{ model_id }})
+                    </p>
+                </div>
+                <div>
+                    <a href="{{ url_for('status.status_page') }}" class="btn btn-secondary">
+                        <i class="bi bi-arrow-left me-2"></i>Back to Status
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- File Info Card -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <small class="text-muted">File Path</small>
+                            <div><code class="small">{{ log_file }}</code></div>
+                        </div>
+                        <div class="col-md-3">
+                            <small class="text-muted">File Size</small>
+                            <div>
+                                {% if file_size < 1024 %}
+                                    {{ file_size }} bytes
+                                {% elif file_size < 1048576 %}
+                                    {{ "%.2f"|format(file_size / 1024) }} KB
+                                {% else %}
+                                    {{ "%.2f"|format(file_size / 1048576) }} MB
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <small class="text-muted">Last Modified</small>
+                            <div>{{ modified_time.strftime('%Y-%m-%d %H:%M:%S') }}</div>
+                        </div>
+                        <div class="col-md-2">
+                            <button class="btn btn-sm btn-primary" onclick="location.reload()">
+                                <i class="bi bi-arrow-clockwise me-1"></i>Refresh
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Log Content -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="bi bi-file-text me-2"></i>Log Content
+                    </h5>
+                    <div>
+                        <button class="btn btn-sm btn-outline-secondary" onclick="copyLogs()">
+                            <i class="bi bi-clipboard me-1"></i>Copy
+                        </button>
+                        <button class="btn btn-sm btn-outline-secondary" onclick="downloadLogs()">
+                            <i class="bi bi-download me-1"></i>Download
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <pre id="logContent" class="p-3 mb-0" style="background-color: #1e1e1e; color: #d4d4d4; font-family: 'Courier New', monospace; font-size: 0.875rem; max-height: 70vh; overflow-y: auto; white-space: pre-wrap; word-wrap: break-word;">{{ log_content }}</pre>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Auto-scroll to bottom on load
+    window.addEventListener('load', function() {
+        const logContent = document.getElementById('logContent');
+        logContent.scrollTop = logContent.scrollHeight;
+    });
+
+    // Auto-refresh every 10 seconds if page is visible
+    let refreshInterval;
+    document.addEventListener('visibilitychange', function() {
+        if (document.hidden) {
+            if (refreshInterval) {
+                clearInterval(refreshInterval);
+            }
+        } else {
+            refreshInterval = setInterval(function() {
+                location.reload();
+            }, 10000);
+        }
+    });
+
+    // Start auto-refresh if page is visible
+    if (!document.hidden) {
+        refreshInterval = setInterval(function() {
+            location.reload();
+        }, 10000);
+    }
+
+    function copyLogs() {
+        const logContent = document.getElementById('logContent').textContent;
+        navigator.clipboard.writeText(logContent).then(function() {
+            // Show success message
+            const btn = event.target.closest('button');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="bi bi-check me-1"></i>Copied!';
+            btn.classList.remove('btn-outline-secondary');
+            btn.classList.add('btn-success');
+            setTimeout(function() {
+                btn.innerHTML = originalText;
+                btn.classList.remove('btn-success');
+                btn.classList.add('btn-outline-secondary');
+            }, 2000);
+        }).catch(function(err) {
+            alert('Failed to copy logs: ' + err);
+        });
+    }
+
+    function downloadLogs() {
+        const logContent = document.getElementById('logContent').textContent;
+        const blob = new Blob([logContent], { type: 'text/plain' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'scan_{{ project_id }}_{{ model_id }}.log';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+    }
+
+    // Auto-scroll to bottom on refresh
+    const logContent = document.getElementById('logContent');
+    if (logContent) {
+        logContent.scrollTop = logContent.scrollHeight;
+    }
+</script>
+{% endblock %}
+

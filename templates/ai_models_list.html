@@ -1,0 +1,378 @@
+{% extends "base.html" %}
+{% block title %}AI Models — REDCON OFFENCE{% endblock %}
+
+{% block content %}
+<div class="rdb-wrap">
+
+  <!-- Header -->
+  <div class="rdb-header">
+    <div>
+      <h1 class="rdb-title">AI Models</h1>
+      <p class="rdb-subtitle">Manage API keys and models used for security analysis</p>
+    </div>
+    <button class="btn btn-primary d-inline-flex align-items-center gap-2 px-4"
+            data-bs-toggle="modal" data-bs-target="#addModelModal">
+      <i class="bi bi-plus-lg"></i>Add Model
+    </button>
+  </div>
+
+  <!-- Supported providers band -->
+  <div class="aim-providers mb-4">
+    <span class="aim-providers-label">Supported providers</span>
+    <div class="aim-provider-pill"><i class="bi bi-stars" style="color:#10a37f;"></i> OpenAI</div>
+    <div class="aim-provider-pill"><i class="bi bi-cpu" style="color:#d4a574;"></i> Anthropic</div>
+    <div class="aim-provider-pill"><i class="bi bi-gem" style="color:#4285f4;"></i> Gemini</div>
+    <div class="aim-provider-pill"><i class="bi bi-lightning" style="color:#e5e5e5;"></i> xAI</div>
+    <div class="aim-provider-pill"><i class="bi bi-search-heart" style="color:#4d9de0;"></i> DeepSeek</div>
+    <div class="aim-provider-pill"><i class="bi bi-hdd-stack" style="color:#34d399;"></i> Ollama</div>
+  </div>
+
+  <!-- Models grid -->
+  {% if models %}
+  <div class="rdb-section-hdr mb-3">
+    <i class="bi bi-robot"></i>
+    <span>Active Models</span>
+    <span class="rdb-section-count">{{ models|length }}</span>
+    <button class="btn btn-sm btn-outline-danger ms-auto" style="font-size:.75rem;" onclick="deleteAllModels()">
+      <i class="bi bi-trash me-1"></i>Remove All
+    </button>
+  </div>
+  <div class="row g-3 mb-4">
+    {% for model in models %}
+    {% set vcolors = {'openai':('#10a37f','bi-stars'),'anthropic':('#d4a574','bi-cpu'),'gemini':('#4285f4','bi-gem'),'xai':('#e5e5e5','bi-lightning'),'deepseek':('#4d9de0','bi-search-heart'),'ollama':('#34d399','bi-hdd-stack')} %}
+    {% set vc = vcolors.get(model.vendor.lower(), ('#9198a1','bi-robot')) %}
+    <div class="col-xl-4 col-lg-6" id="model-card-{{ model.id }}">
+      <div class="aim-card" style="--vc:{{ vc[0] }};">
+        <div class="aim-card-hdr">
+          <div class="aim-card-icon"><i class="bi {{ vc[1] }}"></i></div>
+          <div class="aim-card-meta">
+            <div class="aim-card-name">{{ model.model_name }}</div>
+            <div class="aim-card-vendor">{{ model.vendor }}</div>
+          </div>
+          <span class="aim-key-badge"><i class="bi bi-key"></i> ···{{ model.api_key[-4:] if model.api_key else 'N/A' }}</span>
+        </div>
+        <div class="aim-card-footer">
+          <span style="font-size:.72rem;color:var(--redcon-text-muted);"><i class="bi bi-calendar3 me-1"></i>{{ model.created_at.strftime('%b %d, %Y') }}</span>
+          <div class="d-flex gap-2">
+            <button class="btn btn-sm aim-btn-test" onclick="testModelConnection({{ model.id }})" id="testBtn{{ model.id }}"><i class="bi bi-wifi me-1"></i>Test</button>
+            <button class="btn btn-sm aim-btn-edit" onclick="editModel({{ model.id }})"><i class="bi bi-pencil me-1"></i>Edit</button>
+            <button class="btn btn-sm aim-btn-del" onclick="deleteModel({{ model.id }})"><i class="bi bi-trash"></i></button>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="rdb-empty">
+    <div class="rdb-empty-icon"><i class="bi bi-robot"></i></div>
+    <h5 class="rdb-empty-title">No AI Models Yet</h5>
+    <p class="rdb-empty-desc">Add your first AI provider to enable automated security scanning.</p>
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addModelModal">
+      <i class="bi bi-plus-lg me-2"></i>Add First Model
+    </button>
+  </div>
+  {% endif %}
+</div>
+
+<!-- ── Add Model Modal (standard Bootstrap structure) ───────── -->
+<div class="modal fade" id="addModelModal" tabindex="-1" aria-labelledby="addModelLabel" aria-hidden="true" data-bs-backdrop="false" data-bs-keyboard="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content aim-mc">
+
+      <div class="modal-header aim-mh">
+        <div class="d-flex align-items-center gap-3">
+          <div class="aim-modal-icon"><i class="bi bi-plus-circle"></i></div>
+          <div>
+            <h5 class="modal-title mb-0" id="addModelLabel" style="font-size:1rem;font-weight:700;color:#f0f3f6;">Add AI Provider</h5>
+            <div style="font-size:.78rem;color:#636c76;margin-top:.1rem;">Select a vendor and paste your API key</div>
+          </div>
+        </div>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+
+      <form id="addModelForm">
+        <div class="modal-body aim-mb">
+
+          <div class="aim-field-label mb-2">Select Provider</div>
+          <input type="hidden" name="vendor" id="vendorInput">
+          <div class="aim-vendor-grid mb-1">
+            <div class="aim-vendor-card" data-vendor="openai" onclick="selectVendor(this)">
+              <i class="bi bi-stars" style="color:#10a37f;font-size:1.4rem;"></i><span>OpenAI</span>
+            </div>
+            <div class="aim-vendor-card" data-vendor="anthropic" onclick="selectVendor(this)">
+              <i class="bi bi-cpu" style="color:#d4a574;font-size:1.4rem;"></i><span>Anthropic</span>
+            </div>
+            <div class="aim-vendor-card" data-vendor="gemini" onclick="selectVendor(this)">
+              <i class="bi bi-gem" style="color:#4285f4;font-size:1.4rem;"></i><span>Gemini</span>
+            </div>
+            <div class="aim-vendor-card" data-vendor="xai" onclick="selectVendor(this)">
+              <i class="bi bi-lightning" style="color:#e5e5e5;font-size:1.4rem;"></i><span>xAI</span>
+            </div>
+            <div class="aim-vendor-card" data-vendor="deepseek" onclick="selectVendor(this)">
+              <i class="bi bi-search-heart" style="color:#4d9de0;font-size:1.4rem;"></i><span>DeepSeek</span>
+            </div>
+            <div class="aim-vendor-card" data-vendor="ollama" onclick="selectVendor(this)">
+              <i class="bi bi-hdd-stack" style="color:#34d399;font-size:1.4rem;"></i><span>Ollama</span>
+            </div>
+          </div>
+          <div id="vendorError" style="display:none;font-size:.78rem;color:#f87171;">Please select a provider.</div>
+
+          <div class="aim-field mt-3">
+            <label class="aim-field-label">
+              <i class="bi bi-key me-1"></i>API Key
+              <span id="apiKeyHint" style="font-size:.72rem;font-weight:400;color:#636c76;margin-left:.5rem;"></span>
+            </label>
+            <div style="position:relative;">
+              <input type="password" class="aim-input" id="apiKey" name="api_key"
+                     placeholder="Paste your API key here…" autocomplete="off">
+              <button type="button" class="aim-key-toggle" onclick="toggleVis('apiKey','eyeIcon1')">
+                <i class="bi bi-eye" id="eyeIcon1"></i>
+              </button>
+            </div>
+            <div id="ollamaNote" style="display:none;margin-top:.5rem;background:rgba(52,211,153,.06);border:1px solid rgba(52,211,153,.2);border-radius:8px;padding:.6rem .85rem;font-size:.78rem;color:#6ee7b7;">
+              <i class="bi bi-info-circle me-1"></i>Ollama runs locally — no API key needed.
+            </div>
+          </div>
+
+          <div id="addStatus" class="aim-status mt-3" style="display:none;"></div>
+        </div>
+
+        <div class="modal-footer aim-mf">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="addSubmitBtn">
+            <i class="bi bi-search me-1"></i>Discover & Add Models
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ── Edit Model Modal ─────────────────────────────────────── -->
+<div class="modal fade" id="editModelModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="false" data-bs-keyboard="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content aim-mc">
+
+      <div class="modal-header aim-mh">
+        <div class="d-flex align-items-center gap-3">
+          <div class="aim-modal-icon" style="background:rgba(96,165,250,.12);color:#60a5fa;"><i class="bi bi-pencil"></i></div>
+          <h5 class="modal-title mb-0" style="font-size:1rem;font-weight:700;color:#f0f3f6;">Edit Model</h5>
+        </div>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+
+      <form id="editModelForm">
+        <input type="hidden" id="editModelId">
+        <div class="modal-body aim-mb">
+          <div class="aim-field">
+            <label class="aim-field-label">Model Name</label>
+            <input type="text" class="aim-input" id="editModelName" required>
+          </div>
+          <div class="aim-field mt-3">
+            <label class="aim-field-label">Vendor</label>
+            <input type="text" class="aim-input" id="editVendorDisp" readonly style="opacity:.5;cursor:not-allowed;">
+          </div>
+          <div class="aim-field mt-3">
+            <label class="aim-field-label"><i class="bi bi-key me-1"></i>New API Key <span style="font-size:.72rem;font-weight:400;color:#636c76;">(leave blank to keep current)</span></label>
+            <div style="position:relative;">
+              <input type="password" class="aim-input" id="editApiKey" autocomplete="off" placeholder="Enter new key or leave blank">
+              <button type="button" class="aim-key-toggle" onclick="toggleVis('editApiKey','eyeIcon2')">
+                <i class="bi bi-eye" id="eyeIcon2"></i>
+              </button>
+            </div>
+          </div>
+          <div id="editStatus" class="aim-status mt-3" style="display:none;"></div>
+        </div>
+        <div class="modal-footer aim-mf">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<style>
+/* providers band */
+.aim-providers{display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;background:var(--redcon-card);border:1px solid var(--redcon-border);border-radius:12px;padding:.75rem 1.25rem;}
+.aim-providers-label{font-size:.68rem;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--redcon-text-muted);margin-right:.25rem;}
+.aim-provider-pill{display:inline-flex;align-items:center;gap:.35rem;background:rgba(255,255,255,.04);border:1px solid var(--redcon-border);border-radius:20px;padding:.25rem .75rem;font-size:.78rem;color:var(--redcon-text-secondary);}
+/* model card */
+.aim-card{background:var(--redcon-card);border:1px solid var(--redcon-border);border-top:3px solid var(--vc,#9198a1);border-radius:12px;transition:transform .2s,box-shadow .2s;}
+.aim-card:hover{transform:translateY(-3px);box-shadow:0 10px 28px rgba(0,0,0,.3),0 0 0 1px var(--vc,#9198a1);}
+.aim-card-hdr{display:flex;align-items:center;gap:.85rem;padding:1rem 1.25rem;border-bottom:1px solid var(--redcon-border);}
+.aim-card-icon{width:40px;height:40px;border-radius:10px;background:rgba(255,255,255,.05);display:flex;align-items:center;justify-content:center;font-size:1.2rem;color:var(--vc,#9198a1);flex-shrink:0;}
+.aim-card-meta{flex:1;min-width:0;}
+.aim-card-name{font-size:.9rem;font-weight:600;color:var(--redcon-text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.aim-card-vendor{font-size:.72rem;color:var(--redcon-text-muted);margin-top:.1rem;}
+.aim-key-badge{display:inline-flex;align-items:center;gap:.3rem;background:rgba(255,255,255,.05);border:1px solid var(--redcon-border);border-radius:8px;padding:.25rem .6rem;font-size:.72rem;color:var(--redcon-text-muted);font-family:monospace;flex-shrink:0;}
+.aim-card-footer{display:flex;align-items:center;justify-content:space-between;padding:.75rem 1.25rem;}
+.aim-btn-test{background:rgba(52,211,153,.08);color:#34d399;border:1px solid rgba(52,211,153,.25);font-size:.75rem;}
+.aim-btn-test:hover{background:rgba(52,211,153,.18);color:#34d399;border-color:#34d399;}
+.aim-btn-edit{background:rgba(96,165,250,.08);color:#60a5fa;border:1px solid rgba(96,165,250,.25);font-size:.75rem;}
+.aim-btn-edit:hover{background:rgba(96,165,250,.18);color:#60a5fa;border-color:#60a5fa;}
+.aim-btn-del{background:rgba(239,68,68,.08);color:#f87171;border:1px solid rgba(239,68,68,.2);font-size:.75rem;}
+.aim-btn-del:hover{background:rgba(239,68,68,.18);color:#f87171;border-color:#f87171;}
+/* modal overrides — force dark bg regardless of Bootstrap theme */
+.aim-mc{background:#161b22 !important;border:1px solid #2d333b !important;border-radius:16px !important;overflow:hidden;box-shadow:0 24px 80px rgba(0,0,0,.7) !important;}
+.aim-mh{background:rgba(201,53,63,.04);border-bottom:1px solid #2d333b !important;padding:1.25rem 1.5rem;}
+.aim-mb{padding:1.5rem;background:#161b22;}
+.aim-mf{background:#161b22;border-top:1px solid #2d333b !important;padding:1rem 1.5rem;}
+.aim-modal-icon{width:40px;height:40px;border-radius:10px;background:rgba(201,53,63,.1);color:#c9353f;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0;}
+/* vendor picker */
+.aim-vendor-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:.6rem;}
+.aim-vendor-card{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.4rem;padding:.9rem .5rem;border-radius:10px;background:#0d1117;border:1px solid #2d333b;cursor:pointer;transition:all .15s;font-size:.8rem;font-weight:500;color:#9198a1;}
+.aim-vendor-card:hover{background:#1c2128;border-color:#444c56;color:#f0f3f6;}
+.aim-vendor-card.selected{background:rgba(201,53,63,.1);border-color:#c9353f;color:#f0f3f6;box-shadow:0 0 0 2px rgba(201,53,63,.25);}
+/* fields */
+.aim-field{display:flex;flex-direction:column;gap:.4rem;}
+.aim-field-label{font-size:.8rem;font-weight:600;color:#9198a1;display:flex;align-items:center;}
+.aim-input{width:100%;background:#0d1117;border:1px solid #2d333b;border-radius:10px;padding:.65rem 2.75rem .65rem .9rem;color:#f0f3f6;font-size:.9rem;outline:none;transition:border-color .15s,box-shadow .15s;}
+.aim-input:focus{border-color:#c9353f;box-shadow:0 0 0 3px rgba(201,53,63,.18);}
+.aim-input::placeholder{color:#444c56;}
+.aim-key-toggle{position:absolute;right:.75rem;top:50%;transform:translateY(-50%);background:none;border:none;color:#636c76;cursor:pointer;padding:0;font-size:1rem;line-height:1;}
+.aim-key-toggle:hover{color:#9198a1;}
+/* status */
+.aim-status{border-radius:10px;padding:.75rem 1rem;font-size:.85rem;line-height:1.5;white-space:pre-line;}
+.aim-status.success{background:rgba(52,211,153,.08);border:1px solid rgba(52,211,153,.25);color:#6ee7b7;}
+.aim-status.error{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);color:#fca5a5;}
+.aim-status.loading{background:rgba(96,165,250,.08);border:1px solid rgba(96,165,250,.25);color:#93c5fd;}
+</style>
+
+<script>
+const API_KEY_HINTS={openai:'Starts with sk-...',anthropic:'Starts with sk-ant-...',gemini:'39-character key',xai:'Starts with xai-...',deepseek:'40+ character key',ollama:'Not required'};
+
+function selectVendor(el){
+  document.querySelectorAll('.aim-vendor-card').forEach(c=>c.classList.remove('selected'));
+  el.classList.add('selected');
+  const v=el.dataset.vendor;
+  document.getElementById('vendorInput').value=v;
+  document.getElementById('vendorError').style.display='none';
+  document.getElementById('apiKeyHint').textContent=API_KEY_HINTS[v]||'';
+  const isOllama=v==='ollama';
+  document.getElementById('ollamaNote').style.display=isOllama?'block':'none';
+  const keyInput=document.getElementById('apiKey');
+  keyInput.disabled=isOllama;
+  keyInput.required=!isOllama;
+  keyInput.placeholder=isOllama?'No API key required':'Paste your API key here…';
+  if(isOllama)keyInput.value='';
+}
+
+function toggleVis(inputId,iconId){
+  const i=document.getElementById(inputId);
+  const ico=document.getElementById(iconId);
+  if(i.type==='password'){i.type='text';ico.className='bi bi-eye-slash';}
+  else{i.type='password';ico.className='bi bi-eye';}
+}
+
+// Reset add modal on close
+document.getElementById('addModelModal').addEventListener('hidden.bs.modal',function(){
+  document.getElementById('addModelForm').reset();
+  document.querySelectorAll('.aim-vendor-card').forEach(c=>c.classList.remove('selected'));
+  document.getElementById('vendorInput').value='';
+  document.getElementById('ollamaNote').style.display='none';
+  document.getElementById('vendorError').style.display='none';
+  document.getElementById('apiKey').disabled=false;
+  document.getElementById('apiKey').required=true;
+  document.getElementById('apiKey').type='password';
+  document.getElementById('eyeIcon1').className='bi bi-eye';
+  document.getElementById('apiKeyHint').textContent='';
+  setStatus('addStatus','','');
+});
+
+document.getElementById('addModelForm').addEventListener('submit',function(e){
+  e.preventDefault();
+  const vendor=document.getElementById('vendorInput').value;
+  if(!vendor){document.getElementById('vendorError').style.display='block';return;}
+  const apiKey=document.getElementById('apiKey').value;
+  if(vendor!=='ollama'&&!apiKey.trim()){setStatus('addStatus','error','Please enter an API key.');return;}
+  const btn=document.getElementById('addSubmitBtn');
+  btn.disabled=true;
+  btn.innerHTML='<span class="spinner-border spinner-border-sm me-1"></span>Discovering…';
+  setStatus('addStatus','loading','Contacting API and discovering available models…');
+  fetch('/api/ai-models',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({vendor,api_key:apiKey})})
+  .then(r=>r.json())
+  .then(d=>{
+    btn.disabled=false;
+    btn.innerHTML='<i class="bi bi-search me-1"></i>Discover & Add Models';
+    if(d.success){
+      let msg='✓ Added '+(d.total_added||0)+' model(s) for '+vendor;
+      if(d.successful_models?.length)msg+='\n'+d.successful_models.join(', ');
+      setStatus('addStatus','success',msg);
+      setTimeout(()=>{bootstrap.Modal.getInstance(document.getElementById('addModelModal')).hide();location.reload();},1800);
+    }else{
+      setStatus('addStatus','error',d.error||'Failed to add models.');
+    }
+  })
+  .catch(err=>{
+    btn.disabled=false;
+    btn.innerHTML='<i class="bi bi-search me-1"></i>Discover & Add Models';
+    setStatus('addStatus','error','Network error: '+err.message);
+  });
+});
+
+function editModel(id){
+  fetch('/api/ai-models/'+id).then(r=>r.json()).then(d=>{
+    if(!d.success){showToast('error',d.error||'Failed to load');return;}
+    document.getElementById('editModelId').value=id;
+    document.getElementById('editModelName').value=d.model.model_name;
+    document.getElementById('editVendorDisp').value=d.model.vendor;
+    document.getElementById('editApiKey').value='';
+    setStatus('editStatus','','');
+    new bootstrap.Modal(document.getElementById('editModelModal')).show();
+  });
+}
+
+document.getElementById('editModelForm').addEventListener('submit',function(e){
+  e.preventDefault();
+  const id=document.getElementById('editModelId').value;
+  const payload={model_name:document.getElementById('editModelName').value,vendor:document.getElementById('editVendorDisp').value};
+  const k=document.getElementById('editApiKey').value;
+  if(k.trim())payload.api_key=k;
+  fetch('/api/ai-models/'+id,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)})
+  .then(r=>r.json()).then(d=>{if(d.success)location.reload();else setStatus('editStatus','error',d.error||'Update failed');});
+});
+
+function testModelConnection(id){
+  const btn=document.getElementById('testBtn'+id);
+  const orig=btn.innerHTML;
+  btn.innerHTML='<span class="spinner-border spinner-border-sm"></span>';
+  btn.disabled=true;
+  fetch('/api/test-model-connection',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model_id:id})})
+  .then(r=>r.json()).then(d=>{
+    if(d.success){btn.innerHTML='<i class="bi bi-check-circle me-1"></i>OK';btn.style.cssText='background:rgba(52,211,153,.2);color:#34d399;border-color:#34d399;';showToast('success',(d.model_name||'Model')+': OK');}
+    else{btn.innerHTML='<i class="bi bi-x-circle me-1"></i>Fail';btn.style.cssText='background:rgba(239,68,68,.2);color:#f87171;border-color:#f87171;';showToast('error',d.error||'Failed');}
+    setTimeout(()=>{btn.innerHTML=orig;btn.style.cssText='';btn.disabled=false;},3500);
+  }).catch(err=>{btn.innerHTML=orig;btn.disabled=false;showToast('error','Network error: '+err.message);});
+}
+
+function deleteModel(id){
+  if(!confirm('Remove this model?'))return;
+  fetch('/api/ai-models/'+id,{method:'DELETE'}).then(r=>r.json()).then(d=>{if(d.success)location.reload();else showToast('error',d.error);});
+}
+
+function deleteAllModels(){
+  const n=document.querySelectorAll('[id^="model-card-"]').length;
+  if(!confirm('Remove all '+n+' model(s)?'))return;
+  fetch('/api/ai-models/delete-all',{method:'DELETE'}).then(r=>r.json()).then(d=>{if(d.success)location.reload();else showToast('error',d.error);});
+}
+
+function setStatus(id,type,msg){
+  const el=document.getElementById(id);
+  if(!msg){el.style.display='none';el.textContent='';return;}
+  el.className='aim-status '+(type||'');
+  el.textContent=msg;
+  el.style.display='block';
+}
+
+function showToast(type,msg){
+  const t=document.createElement('div');
+  const isOk=type==='success';
+  t.style.cssText='position:fixed;top:1.25rem;right:1.25rem;z-index:9999;padding:.75rem 1.1rem;border-radius:10px;font-size:.85rem;max-width:320px;background:'+(isOk?'rgba(52,211,153,.12)':'rgba(239,68,68,.12)')+';border:1px solid '+(isOk?'rgba(52,211,153,.3)':'rgba(239,68,68,.3)')+';color:'+(isOk?'#6ee7b7':'#fca5a5')+';box-shadow:0 8px 24px rgba(0,0,0,.4);';
+  t.innerHTML='<i class="bi bi-'+(isOk?'check-circle':'exclamation-circle')+' me-2"></i>'+msg;
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(),4000);
+}
+</script>
+{% endblock %}

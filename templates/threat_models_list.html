@@ -1,0 +1,217 @@
+{% extends "base.html" %}
+
+{% block title %}Threat Models - Security Scanner{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3 mb-1">Threat Models</h1>
+                    <p class="text-muted mb-0">Available threat models for security analysis</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if tools %}
+        <!-- Threat Models by Category -->
+        {% for category, category_tools in tools_by_category.items() %}
+        <div class="mb-5">
+            <h4 class="h5 mb-3 text-light">
+                <i class="bi bi-{{ 'shield-check' if category == 'Blockchain' else 'code-slash' if category == 'Programming' else 'lock' if category == 'Cryptography' else 'globe' if category == 'Web' else 'server' if category == 'Infrastructure' else 'robot' if category == 'Ai' else 'mobile' if category == 'Iot' else 'network' }} me-2"></i>
+                {{ category }} Threat Models
+            </h4>
+            <div class="row">
+                {% for tool in category_tools %}
+                <div class="col-lg-4 col-md-6 mb-4">
+                    <div class="card h-100">
+                        <div class="card-header">
+                            <h5 class="mb-0">
+                                <i class="bi bi-shield-exclamation me-2"></i>
+                                {{ tool.display_name }}
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <p class="card-text text-muted">
+                                {{ tool.description }}
+                            </p>
+                            
+                            <div class="mb-2">
+                                <small class="text-muted">
+                                    <i class="bi bi-tag me-1"></i>
+                                    Category: {{ tool.category }}
+                                </small>
+                            </div>
+                            
+                            {% if tool.subcategory and tool.subcategory != 'General' %}
+                            <div class="mb-2">
+                                <small class="text-muted">
+                                    <i class="bi bi-folder me-1"></i>
+                                    Subcategory: {{ tool.subcategory }}
+                                </small>
+                            </div>
+                            {% endif %}
+                            
+                            <div class="mb-2">
+                                <small class="text-muted">
+                                    <i class="bi bi-{{ 'play-circle' if tool.is_async else 'play' }} me-1"></i>
+                                    {{ 'Async' if tool.is_async else 'Sync' }} Function
+                                </small>
+                            </div>
+                            
+                            {% if tool.parameters %}
+                            <div class="mb-2">
+                                <small class="text-muted">
+                                    <i class="bi bi-list-ul me-1"></i>
+                                    {{ tool.parameters|length }} Parameters
+                                </small>
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="card-footer bg-transparent">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="badge bg-success">Available</span>
+                                <button class="btn btn-outline-primary btn-sm" onclick="viewThreatModel('{{ tool.name }}')">
+                                    <i class="bi bi-eye me-1"></i>View Details
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <!-- Empty State -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body text-center py-5">
+                        <i class="bi bi-shield-exclamation display-1 text-muted mb-4"></i>
+                        <h4 class="text-muted mb-3">No Threat Models Found</h4>
+                        <p class="text-muted mb-4">Threat models will be loaded from the threat modeling tools directory.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+<!-- Threat Model Details Modal -->
+<div class="modal fade" id="threatModelModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="threatModelTitle">Threat Model Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="threatModelContent">
+                <!-- Content will be loaded here -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Make threat tools data available to JavaScript
+window.threatToolsData = {{ tools|tojson }};
+</script>
+<script>
+function viewThreatModel(toolName) {
+    // Find the tool data from the page data
+    const toolData = window.threatToolsData ? window.threatToolsData.find(t => t.name === toolName) : null;
+    
+    if (!toolData) {
+        // Fallback for old format
+        toolData = {
+            name: toolName,
+            display_name: toolName.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()),
+            description: `This threat model provides security analysis capabilities for ${toolName.replace('_', ' ').toLowerCase()} threats and vulnerabilities.`,
+            category: toolName.split('_')[0].toUpperCase(),
+            subcategory: 'General',
+            is_async: false,
+            parameters: []
+        };
+    }
+    
+    document.getElementById('threatModelTitle').textContent = toolData.display_name;
+    
+    let parametersHtml = '';
+    if (toolData.parameters && toolData.parameters.length > 0) {
+        parametersHtml = `
+            <div class="mb-3">
+                <h6>Parameters</h6>
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Type</th>
+                                <th>Required</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${toolData.parameters.map(param => `
+                                <tr>
+                                    <td><code>${param.name}</code></td>
+                                    <td><span class="badge bg-secondary">${param.type}</span></td>
+                                    <td>${param.required ? '<span class="badge bg-danger">Yes</span>' : '<span class="badge bg-success">No</span>'}</td>
+                                    <td><small class="text-muted">${param.description.substring(0, 100)}${param.description.length > 100 ? '...' : ''}</small></td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        `;
+    }
+    
+    document.getElementById('threatModelContent').innerHTML = `
+        <div class="mb-3">
+            <h6>Description</h6>
+            <p>${toolData.description}</p>
+        </div>
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <h6>Category</h6>
+                <span class="badge bg-primary">${toolData.category}</span>
+            </div>
+            <div class="col-md-6">
+                <h6>Subcategory</h6>
+                <span class="badge bg-secondary">${toolData.subcategory || 'General'}</span>
+            </div>
+        </div>
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <h6>Function Type</h6>
+                <span class="badge bg-${toolData.is_async ? 'info' : 'warning'}">${toolData.is_async ? 'Async' : 'Sync'}</span>
+            </div>
+            <div class="col-md-6">
+                <h6>Status</h6>
+                <span class="badge bg-success">Available</span>
+            </div>
+        </div>
+        ${parametersHtml}
+        ${toolData.full_docstring ? `
+            <div class="mb-3">
+                <h6>Full Documentation</h6>
+                <pre class="bg-dark text-light p-3 rounded"><code>${toolData.full_docstring}</code></pre>
+            </div>
+        ` : ''}
+    `;
+    
+    const modal = new bootstrap.Modal(document.getElementById('threatModelModal'));
+    modal.show();
+}
+</script>
+{% endblock %}

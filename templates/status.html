@@ -1,0 +1,416 @@
+{% extends "base.html" %}
+
+{% block title %}Status - Security Scanner{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3 mb-1">Scan Status</h1>
+                    <p class="text-muted mb-0">Monitor running security scans</p>
+                </div>
+                <div>
+                    <a href="{{ url_for('status.status_page') }}" class="btn btn-primary">
+                        <i class="bi bi-arrow-clockwise me-2"></i>Refresh
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Summary Card -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="me-3">
+                            <i class="bi bi-search fs-1 text-primary"></i>
+                        </div>
+                        <div>
+                            <h5 class="card-title mb-0">Running Scans</h5>
+                            <p class="text-muted mb-0">
+                                <span class="fs-3 fw-bold text-primary">{{ scan_count }}</span>
+                                <span class="ms-2">active scan process{{ 'es' if scan_count != 1 else '' }}</span>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="me-3">
+                            <i class="bi bi-shield-check fs-1 text-success"></i>
+                        </div>
+                        <div>
+                            <h5 class="card-title mb-0">Running Validations</h5>
+                            <p class="text-muted mb-0">
+                                <span class="fs-3 fw-bold text-success">{{ validation_count }}</span>
+                                <span class="ms-2">active validation process{{ 'es' if validation_count != 1 else '' }}</span>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Error Message -->
+    {% if error %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="alert alert-danger">
+                <i class="bi bi-exclamation-triangle me-2"></i>
+                <strong>Error:</strong> {{ error }}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Running Scans Table -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-search me-2"></i>Active Scan Processes
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if running_scans %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>PID</th>
+                                    <th>Project</th>
+                                    <th>Model</th>
+                                    <th>Vendor</th>
+                                    <th>Start Time</th>
+                                    <th>Status</th>
+                                    <th>Command</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for scan in running_scans %}
+                                <tr>
+                                    <td>
+                                        <code class="text-info">{{ scan.pid }}</code>
+                                    </td>
+                                    <td>
+                                        {% if scan.project_id %}
+                                        <a href="{{ url_for('projects.view_project', project_id=scan.project_id) }}" class="text-decoration-none">
+                                            <strong>{{ scan.project_name }}</strong>
+                                        </a>
+                                        <br>
+                                        <small class="text-muted">ID: {{ scan.project_id }}</small>
+                                        {% else %}
+                                        <span class="text-muted">{{ scan.project_name }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if scan.model_id %}
+                                        <strong>{{ scan.model_name }}</strong>
+                                        <br>
+                                        <small class="text-muted">ID: {{ scan.model_id }}</small>
+                                        {% else %}
+                                        <span class="text-muted">{{ scan.model_name }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-secondary">{{ scan.vendor }}</span>
+                                    </td>
+                                    <td>
+                                        {% if scan.start_time %}
+                                        <span>{{ scan.start_time.strftime('%Y-%m-%d %H:%M:%S') }}</span>
+                                        {% if scan.runtime_hours %}
+                                        <br>
+                                        <small class="text-muted">
+                                            {{ "%.2f"|format(scan.runtime_hours) }}h running
+                                        </small>
+                                        {% endif %}
+                                        {% else %}
+                                        <span class="text-muted">Unknown</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-success">{{ scan.status }}</span>
+                                    </td>
+                                    <td>
+                                        <code class="text-muted small" style="font-size: 0.75rem;">{{ scan.cmdline }}</code>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            {% if scan.project_id and scan.model_id %}
+                                            <a href="{{ url_for('status.view_scan_logs', project_id=scan.project_id, model_id=scan.model_id) }}" 
+                                               class="btn btn-info btn-sm" 
+                                               title="View Logs">
+                                                <i class="bi bi-file-text"></i>
+                                            </a>
+                                            {% endif %}
+                                            <button class="btn btn-danger btn-sm kill-process-btn" 
+                                                    data-pid="{{ scan.pid }}"
+                                                    data-project="{{ scan.project_name }}"
+                                                    data-model="{{ scan.model_name }}"
+                                                    title="Kill Process">
+                                                <i class="bi bi-x-circle"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5">
+                        <i class="bi bi-check-circle fs-1 text-muted mb-3"></i>
+                        <p class="text-muted">No active scan processes found</p>
+                        <p class="text-muted small">Start a scan from a project page to see it here</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Running Validations Table -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-shield-check me-2"></i>Active Validation Processes
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if running_validations %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>PID</th>
+                                    <th>Finding</th>
+                                    <th>Project</th>
+                                    <th>Model</th>
+                                    <th>Vendor</th>
+                                    <th>Start Time</th>
+                                    <th>Status</th>
+                                    <th>Command</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for validation in running_validations %}
+                                <tr>
+                                    <td>
+                                        <code class="text-info">{{ validation.pid }}</code>
+                                    </td>
+                                    <td>
+                                        {% if validation.finding_id %}
+                                        <a href="{{ url_for('findings.finding_detail', finding_id=validation.finding_id) }}" class="text-decoration-none">
+                                            <strong>{{ validation.finding_title }}</strong>
+                                        </a>
+                                        <br>
+                                        <small class="text-muted">ID: {{ validation.finding_id }}</small>
+                                        {% else %}
+                                        <span class="text-muted">{{ validation.finding_title }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if validation.project_id %}
+                                        <a href="{{ url_for('projects.view_project', project_id=validation.project_id) }}" class="text-decoration-none">
+                                            <strong>{{ validation.project_name }}</strong>
+                                        </a>
+                                        <br>
+                                        <small class="text-muted">ID: {{ validation.project_id }}</small>
+                                        {% else %}
+                                        <span class="text-muted">{{ validation.project_name }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if validation.model_id %}
+                                        <strong>{{ validation.model_name }}</strong>
+                                        <br>
+                                        <small class="text-muted">ID: {{ validation.model_id }}</small>
+                                        {% else %}
+                                        <span class="text-muted">{{ validation.model_name }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-secondary">{{ validation.vendor }}</span>
+                                    </td>
+                                    <td>
+                                        {% if validation.start_time %}
+                                        <span>{{ validation.start_time.strftime('%Y-%m-%d %H:%M:%S') }}</span>
+                                        {% if validation.runtime_hours %}
+                                        <br>
+                                        <small class="text-muted">
+                                            {{ "%.2f"|format(validation.runtime_hours) }}h running
+                                        </small>
+                                        {% endif %}
+                                        {% else %}
+                                        <span class="text-muted">Unknown</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-success">{{ validation.status }}</span>
+                                    </td>
+                                    <td>
+                                        <code class="text-muted small" style="font-size: 0.75rem;">{{ validation.cmdline }}</code>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            {% if validation.finding_id and validation.model_id %}
+                                            <a href="{{ url_for('status.view_validation_logs', finding_id=validation.finding_id, model_id=validation.model_id) }}" 
+                                               class="btn btn-info btn-sm" 
+                                               title="View Logs">
+                                                <i class="bi bi-file-text"></i>
+                                            </a>
+                                            {% endif %}
+                                            <button class="btn btn-danger btn-sm kill-process-btn" 
+                                                    data-pid="{{ validation.pid }}"
+                                                    data-finding="{{ validation.finding_title }}"
+                                                    data-model="{{ validation.model_name }}"
+                                                    title="Kill Process">
+                                                <i class="bi bi-x-circle"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5">
+                        <i class="bi bi-shield-check fs-1 text-muted mb-3"></i>
+                        <p class="text-muted">No active validation processes found</p>
+                        <p class="text-muted small">Start a validation from a finding page to see it here</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Auto-refresh every 30 seconds
+    setTimeout(function() {
+        location.reload();
+    }, 30000);
+
+    // Handle kill process buttons
+    document.addEventListener('DOMContentLoaded', function() {
+        const killButtons = document.querySelectorAll('.kill-process-btn');
+        
+        killButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const pid = this.getAttribute('data-pid');
+                const project = this.getAttribute('data-project');
+                const finding = this.getAttribute('data-finding');
+                const model = this.getAttribute('data-model');
+                
+                // Confirm before killing
+                let confirmMessage = `Are you sure you want to kill process ${pid}?\n\n`;
+                
+                if (project) {
+                    confirmMessage += `Project: ${project}\n`;
+                }
+                
+                if (finding) {
+                    confirmMessage += `Finding: ${finding}\n`;
+                }
+                
+                confirmMessage += `Model: ${model}\n\n`;
+                confirmMessage += `This will terminate the ${finding ? 'validation' : 'scan'} process.`;
+                
+                if (!confirm(confirmMessage)) {
+                    return;
+                }
+                
+                // Disable button and show loading state
+                const originalHtml = this.innerHTML;
+                this.disabled = true;
+                this.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Killing...';
+                
+                // Send kill request
+                fetch(`/status/kill/${pid}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Show success message
+                        const alertDiv = document.createElement('div');
+                        alertDiv.className = 'alert alert-success alert-dismissible fade show';
+                        alertDiv.innerHTML = `
+                            <i class="bi bi-check-circle me-2"></i>
+                            <strong>Success:</strong> ${data.message}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        `;
+                        document.querySelector('.container-fluid').insertBefore(
+                            alertDiv, 
+                            document.querySelector('.container-fluid').firstChild
+                        );
+                        
+                        // Reload page after a short delay
+                        setTimeout(() => {
+                            location.reload();
+                        }, 1000);
+                    } else {
+                        // Show error message
+                        const alertDiv = document.createElement('div');
+                        alertDiv.className = 'alert alert-danger alert-dismissible fade show';
+                        alertDiv.innerHTML = `
+                            <i class="bi bi-exclamation-triangle me-2"></i>
+                            <strong>Error:</strong> ${data.error || 'Failed to kill process'}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        `;
+                        document.querySelector('.container-fluid').insertBefore(
+                            alertDiv, 
+                            document.querySelector('.container-fluid').firstChild
+                        );
+                        
+                        // Re-enable button
+                        this.disabled = false;
+                        this.innerHTML = originalHtml;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    const alertDiv = document.createElement('div');
+                    alertDiv.className = 'alert alert-danger alert-dismissible fade show';
+                    alertDiv.innerHTML = `
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        <strong>Error:</strong> Failed to kill process: ${error.message}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    `;
+                    document.querySelector('.container-fluid').insertBefore(
+                        alertDiv, 
+                        document.querySelector('.container-fluid').firstChild
+                    );
+                    
+                    // Re-enable button
+                    this.disabled = false;
+                    this.innerHTML = originalHtml;
+                });
+            });
+        });
+    });
+</script>
+{% endblock %}
+

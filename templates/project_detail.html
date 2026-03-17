@@ -1,0 +1,1541 @@
+{% extends "base.html" %}
+
+{% block title %}{{ project.name }} - Security Scanner{% endblock %}
+
+{% block styles %}
+<style>
+.page-header {
+    padding: 0;
+}
+
+.page-title {
+    font-size: 1.75rem;
+    font-weight: 600;
+    color: #ffffff;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.page-meta {
+    color: #adb5bd;
+    font-size: 0.875rem;
+    margin-top: 0.5rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.page-meta .separator {
+    color: #6c757d;
+}
+
+.stat-card {
+    transition: all 0.2s ease;
+    height: 100%;
+    border-left-width: 3px !important;
+}
+
+.stat-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.stat-card.critical {
+    border-left-color: #dc3545 !important;
+}
+
+.stat-card.high {
+    border-left-color: #ffc107 !important;
+}
+
+.stat-card.open {
+    border-left-color: #0dcaf0 !important;
+}
+
+.stat-card.resolved {
+    border-left-color: #198754 !important;
+}
+
+.stat-card .card-body {
+    padding: 1.5rem 1.25rem;
+}
+
+.stat-icon {
+    font-size: 2rem;
+    opacity: 0.9;
+}
+
+.stat-value {
+    font-size: 2.5rem;
+    font-weight: 700;
+    line-height: 1;
+    margin-bottom: 0.5rem;
+}
+
+.stat-label {
+    font-size: 0.85rem;
+    color: #adb5bd;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+    margin-top: 0.25rem;
+}
+
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1.5rem;
+}
+
+.info-label {
+    font-size: 0.75rem;
+    color: #adb5bd;
+    margin-bottom: 0.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 500;
+}
+
+.info-value {
+    font-size: 0.95rem;
+    color: #ffffff;
+    font-weight: 500;
+    word-break: break-word;
+}
+
+.info-value a {
+    color: #0d6efd;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    max-width: 100%;
+}
+
+.info-value a:hover {
+    text-decoration: underline;
+}
+
+.info-value a i {
+    flex-shrink: 0;
+}
+
+.card {
+    border: 1px solid #495057;
+    border-radius: 0.5rem;
+    background-color: #343a40;
+    margin-bottom: 1.5rem;
+    overflow: hidden;
+}
+
+.card-header {
+    background-color: #495057;
+    border-bottom: 1px solid #6c757d;
+    padding: 1rem 1.25rem;
+    font-weight: 600;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-radius: 0.5rem 0.5rem 0 0;
+}
+
+.card-body {
+    padding: 1.25rem;
+    background-color: #343a40;
+}
+
+.findings-table thead th {
+    font-weight: 600;
+    font-size: 0.8rem;
+    padding: 1rem 1.25rem;
+    background-color: #495057;
+    border-bottom: 1px solid #6c757d;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.findings-table tbody td {
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid #495057;
+    vertical-align: top;
+}
+
+.findings-table .col-finding {
+    min-width: 200px;
+}
+
+.findings-table .col-severity,
+.findings-table .col-status {
+    min-width: 100px;
+}
+
+.findings-table .col-created {
+    min-width: 110px;
+}
+
+.findings-table .col-actions {
+    min-width: 60px;
+    width: 60px;
+}
+
+.findings-table tbody tr:hover {
+    background-color: #3a4147;
+}
+
+.findings-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.finding-title {
+    font-weight: 600;
+    color: #ffffff;
+    margin-bottom: 0.375rem;
+    font-size: 0.95rem;
+    line-height: 1.4;
+}
+
+.finding-description {
+    color: #adb5bd;
+    font-size: 0.85rem;
+    line-height: 1.5;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.chart-container {
+    position: relative;
+    height: 220px;
+    margin: 1rem 0;
+}
+
+.chart-container-bar {
+    position: relative;
+    height: 240px;
+    margin: 1rem 0;
+}
+
+.chart-title {
+    font-size: 0.85rem;
+    color: #adb5bd;
+    margin-bottom: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.action-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.action-buttons .btn {
+    white-space: nowrap;
+}
+
+.git-link-container {
+    max-width: 100%;
+    overflow: hidden;
+}
+
+.git-link-container a {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    max-width: 100%;
+}
+
+.git-link-container a span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sidebar-section {
+    margin-bottom: 0;
+}
+
+.badge-custom {
+    font-size: 0.75rem;
+    padding: 0.35rem 0.65rem;
+    font-weight: 500;
+}
+
+/* Facts Section */
+.fact-row:hover {
+    background-color: #3d444a !important;
+}
+
+.fact-row:last-child {
+    border-bottom: none !important;
+}
+
+@media (max-width: 768px) {
+    .page-title {
+        font-size: 1.5rem;
+    }
+    
+    .stat-value {
+        font-size: 2rem;
+    }
+    
+    .stat-icon {
+        font-size: 1.5rem;
+    }
+    
+    .info-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    
+    .action-buttons {
+        width: 100%;
+    }
+    
+    .action-buttons .btn {
+        flex: 1;
+        min-width: 0;
+    }
+    
+    .card-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.75rem;
+    }
+    
+    .findings-table {
+        font-size: 0.875rem;
+    }
+    
+    .findings-table thead th,
+    .findings-table tbody td {
+        padding: 0.75rem 0.5rem;
+    }
+    
+    .findings-table .col-finding {
+        min-width: 150px;
+    }
+    
+    .findings-table .col-severity,
+    .findings-table .col-status {
+        min-width: 80px;
+    }
+    
+    .findings-table .col-actions {
+        min-width: 50px;
+        width: 50px;
+    }
+    
+    .finding-title {
+        font-size: 0.85rem;
+    }
+    
+    .finding-description {
+        font-size: 0.75rem;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-4">
+    <!-- Header Section -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-start gap-3">
+                <div class="flex-grow-1">
+                    <nav aria-label="breadcrumb" class="mb-2">
+                        <ol class="breadcrumb mb-0">
+                            <li class="breadcrumb-item"><a href="{{ url_for('home.index') }}" class="text-decoration-none">Projects</a></li>
+                            <li class="breadcrumb-item active text-white">{{ project.name }}</li>
+                        </ol>
+                    </nav>
+                    <div class="d-flex align-items-center gap-3 mb-2">
+                        <h1 class="page-title mb-0">{{ project.name }}</h1>
+                        <span class="badge bg-{{ 'success' if project.status.value == 'active' else 'secondary' }} badge-custom align-self-start">
+                            {{ project.status.value.title() }}
+                        </span>
+                    </div>
+                    <div class="page-meta">
+                        <span><i class="bi bi-calendar3 me-1"></i>Created {{ project.created_at.strftime('%B %d, %Y') }}</span>
+                        {% if project.last_scanned_at %}
+                        <span class="separator">•</span>
+                        <span><i class="bi bi-clock-history me-1"></i>Last scanned {{ project.last_scanned_at.strftime('%b %d, %Y') }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="action-buttons">
+                    <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#startScanModal">
+                        <i class="bi bi-play-circle me-1"></i>Start Scan
+                    </button>
+                    {% if project.findings %}
+                    <button type="button" class="btn btn-info" data-bs-toggle="modal" data-bs-target="#bulkValidateModal">
+                        <i class="bi bi-check2-all me-1"></i>Validate All
+                    </button>
+                    {% endif %}
+                    {% if project.git_link and project.input_type.value == 'git_link' %}
+                    <button type="button" class="btn btn-warning" id="resyncProjectBtn" title="Re-clone the repository">
+                        <i class="bi bi-arrow-clockwise me-1"></i>Resync
+                    </button>
+                    {% endif %}
+                    <button type="button" class="btn btn-primary" id="addMcpToCursorBtn" title="Add MCP Server to Cursor">
+                        <i class="bi bi-plugin me-1"></i>Add MCP to Cursor
+                    </button>
+                    <a href="{{ url_for('projects.edit_project', project_id=project.id) }}" class="btn btn-outline-secondary">
+                        <i class="bi bi-pencil me-1"></i>Edit
+                    </a>
+                    <a href="{{ url_for('home.index') }}" class="btn btn-outline-primary">
+                        <i class="bi bi-arrow-left me-1"></i>Back
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Section -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3">
+            <div class="card stat-card critical">
+                <div class="card-body text-center">
+                    <div class="stat-icon text-danger mb-2">
+                        <i class="bi bi-exclamation-triangle-fill"></i>
+                    </div>
+                    <div class="stat-value text-danger">{{ stats.critical_findings }}</div>
+                    <div class="stat-label">Critical Findings</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card stat-card high">
+                <div class="card-body text-center">
+                    <div class="stat-icon text-warning mb-2">
+                        <i class="bi bi-exclamation-circle-fill"></i>
+                    </div>
+                    <div class="stat-value text-warning">{{ stats.high_findings }}</div>
+                    <div class="stat-label">High Findings</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card stat-card open">
+                <div class="card-body text-center">
+                    <div class="stat-icon text-info mb-2">
+                        <i class="bi bi-circle-fill"></i>
+                    </div>
+                    <div class="stat-value text-info">{{ stats.open_findings }}</div>
+                    <div class="stat-label">Open Findings</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card stat-card resolved">
+                <div class="card-body text-center">
+                    <div class="stat-icon text-success mb-2">
+                        <i class="bi bi-check-circle-fill"></i>
+                    </div>
+                    <div class="stat-value text-success">{{ stats.resolved_findings }}</div>
+                    <div class="stat-label">Resolved Findings</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- AI Validation Insights -->
+    {% if confirmation_insights %}
+    <div class="row g-3 mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span><i class="bi bi-robot me-2"></i>AI Validation Insights</span>
+                    <span class="badge bg-secondary">{{ confirmation_insights.total_confirmations }} confirmations from {{ confirmation_insights.unique_models_count }} model(s)</span>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <!-- Confirmed Bugs -->
+                        <div class="col-6 col-md-3">
+                            <div class="text-center p-3 rounded" style="background: rgba(220, 53, 69, 0.15); border: 1px solid rgba(220, 53, 69, 0.3);">
+                                <i class="bi bi-bug-fill text-danger mb-2 d-block" style="font-size: 1.5rem;"></i>
+                                <div class="h3 mb-1 text-danger">{{ confirmation_insights.confirmed_bugs }}</div>
+                                <div class="small text-muted">Confirmed Bugs</div>
+                                <div class="small text-danger mt-1">All models agree</div>
+                            </div>
+                        </div>
+                        <!-- False Positives -->
+                        <div class="col-6 col-md-3">
+                            <div class="text-center p-3 rounded" style="background: rgba(40, 167, 69, 0.15); border: 1px solid rgba(40, 167, 69, 0.3);">
+                                <i class="bi bi-shield-check text-success mb-2 d-block" style="font-size: 1.5rem;"></i>
+                                <div class="h3 mb-1 text-success">{{ confirmation_insights.confirmed_false_positives }}</div>
+                                <div class="small text-muted">False Positives</div>
+                                <div class="small text-success mt-1">Safe to ignore</div>
+                            </div>
+                        </div>
+                        <!-- Conflicting -->
+                        <div class="col-6 col-md-3">
+                            <div class="text-center p-3 rounded" style="background: rgba(255, 193, 7, 0.15); border: 1px solid rgba(255, 193, 7, 0.3);">
+                                <i class="bi bi-exclamation-triangle text-warning mb-2 d-block" style="font-size: 1.5rem;"></i>
+                                <div class="h3 mb-1 text-warning">{{ confirmation_insights.conflicting }}</div>
+                                <div class="small text-muted">Conflicting</div>
+                                <div class="small text-warning mt-1">Needs manual review</div>
+                            </div>
+                        </div>
+                        <!-- Pending -->
+                        <div class="col-6 col-md-3">
+                            <div class="text-center p-3 rounded" style="background: rgba(108, 117, 125, 0.15); border: 1px solid rgba(108, 117, 125, 0.3);">
+                                <i class="bi bi-hourglass-split text-secondary mb-2 d-block" style="font-size: 1.5rem;"></i>
+                                <div class="h3 mb-1 text-secondary">{{ confirmation_insights.pending_validation }}</div>
+                                <div class="small text-muted">Pending</div>
+                                <div class="small text-secondary mt-1">Awaiting validation</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Validation Progress Bar -->
+                    {% set total_findings = project.findings|length %}
+                    {% if total_findings > 0 %}
+                    {% set validated = confirmation_insights.confirmed_bugs + confirmation_insights.confirmed_false_positives + confirmation_insights.conflicting %}
+                    {% set pct = (validated / total_findings * 100) | int %}
+                    <div class="mt-4">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="small text-muted">Validation Progress</span>
+                            <span class="badge bg-info">{{ validated }}/{{ total_findings }} validated ({{ pct }}%)</span>
+                        </div>
+                        <div class="progress" style="height: 10px;">
+                            <div class="progress-bar bg-danger" style="width: {{ (confirmation_insights.confirmed_bugs / total_findings * 100) }}%" 
+                                 title="Confirmed Bugs: {{ confirmation_insights.confirmed_bugs }}"></div>
+                            <div class="progress-bar bg-success" style="width: {{ (confirmation_insights.confirmed_false_positives / total_findings * 100) }}%" 
+                                 title="False Positives: {{ confirmation_insights.confirmed_false_positives }}"></div>
+                            <div class="progress-bar bg-warning" style="width: {{ (confirmation_insights.conflicting / total_findings * 100) }}%" 
+                                 title="Conflicting: {{ confirmation_insights.conflicting }}"></div>
+                        </div>
+                        <div class="d-flex justify-content-between mt-2">
+                            <div class="small">
+                                <span class="text-danger me-3"><i class="bi bi-circle-fill me-1"></i>Bugs</span>
+                                <span class="text-success me-3"><i class="bi bi-circle-fill me-1"></i>False Positives</span>
+                                <span class="text-warning"><i class="bi bi-circle-fill me-1"></i>Conflicting</span>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="row g-4">
+        <!-- Main Content -->
+        <div class="col-lg-8">
+            {% if analytics.severity_counts or analytics.top_files %}
+            <!-- Analytics -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <span><i class="bi bi-graph-up me-2"></i>Analytics</span>
+                </div>
+                <div class="card-body">
+                    <div class="row g-4">
+                        {% if analytics.severity_counts %}
+                        <div class="col-md-6">
+                            <div class="chart-title">Findings by Severity</div>
+                            <div class="chart-container">
+                                <canvas id="severityChart"></canvas>
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% if analytics.top_files %}
+                        <div class="col-md-6">
+                            <div class="chart-title">Top Files</div>
+                            <div class="chart-container-bar">
+                                <canvas id="fileFindingsChart"></canvas>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Findings -->
+            <div class="card">
+                <div class="card-header">
+                    <span><i class="bi bi-shield-exclamation me-2"></i>Security Findings</span>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge bg-primary badge-custom" id="findingsCount">{{ project.findings|length }} total</span>
+                        <a href="{{ url_for('findings.findings_list') }}?project_id={{ project.id }}" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-list-ul me-1"></i>View All
+                        </a>
+                    </div>
+                </div>
+                {% if project.findings %}
+                <div class="card-body border-bottom border-secondary">
+                    <div class="row g-2 mb-3">
+                        <div class="col-12 col-md-4">
+                            <input type="text" class="form-control form-control-sm" id="findingsSearch" placeholder="Search findings...">
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <select class="form-select form-select-sm" id="findingsSeverityFilter">
+                                <option value="">All Severities</option>
+                                <option value="critical">Critical</option>
+                                <option value="high">High</option>
+                                <option value="medium">Medium</option>
+                                <option value="low">Low</option>
+                                <option value="info">Info</option>
+                            </select>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <select class="form-select form-select-sm" id="findingsStatusFilter">
+                                <option value="">All Statuses</option>
+                                <option value="open">Open</option>
+                                <option value="in_progress">In Progress</option>
+                                <option value="resolved">Resolved</option>
+                                <option value="false_positive">False Positive</option>
+                                <option value="ignored">Ignored</option>
+                            </select>
+                        </div>
+                        <div class="col-12 col-md-2">
+                            <button type="button" class="btn btn-sm btn-outline-secondary w-100" id="clearFiltersBtn">
+                                <i class="bi bi-x-circle me-1"></i>Clear
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover findings-table mb-0">
+                                <thead>
+                                    <tr>
+                                        <th class="col-finding">Finding</th>
+                                        <th class="col-severity">Severity</th>
+                                        <th class="col-status">Status</th>
+                                        <th style="min-width: 120px;">Validation</th>
+                                        <th class="col-created d-none d-md-table-cell">Created</th>
+                                        <th class="col-actions text-center">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="findingsTableBody">
+                                    {% for finding in project.findings[:10] %}
+                                    {% set confirmations = finding.confirmations %}
+                                    {% set conf_count = confirmations|length %}
+                                    {% set fp_votes = confirmations|selectattr('false_positive', 'equalto', true)|list|length %}
+                                    {% set bug_votes = conf_count - fp_votes %}
+                                    <tr class="finding-row" 
+                                        data-severity="{{ finding.severity.value }}" 
+                                        data-status="{{ finding.status.value }}"
+                                        data-title="{{ finding.title|lower }}"
+                                        data-description="{{ finding.description|lower }}">
+                                        <td>
+                                            <div class="finding-title">{{ finding.title }}</div>
+                                            <div class="finding-description">{{ finding.description[:100] }}{% if finding.description|length > 100 %}...{% endif %}</div>
+                                        </td>
+                                        <td>
+                                            <span class="badge severity-{{ finding.severity.value }} badge-custom">{{ finding.severity.value.title() }}</span>
+                                        </td>
+                                        <td>
+                                            <span class="badge status-{{ finding.status.value.replace('_', '-') }} badge-custom">{{ finding.status.value.replace('_', ' ').title() }}</span>
+                                        </td>
+                                        <td>
+                                            {% if conf_count == 0 %}
+                                            <span class="badge bg-secondary" title="No AI validations yet">
+                                                <i class="bi bi-hourglass-split me-1"></i>Pending
+                                            </span>
+                                            {% elif fp_votes == conf_count %}
+                                            <span class="badge bg-success" title="All {{ conf_count }} model(s) agree: False Positive">
+                                                <i class="bi bi-shield-check me-1"></i>FP ({{ conf_count }})
+                                            </span>
+                                            {% elif bug_votes == conf_count %}
+                                            <span class="badge bg-danger" title="All {{ conf_count }} model(s) agree: Real Bug">
+                                                <i class="bi bi-bug-fill me-1"></i>Bug ({{ conf_count }})
+                                            </span>
+                                            {% else %}
+                                            <span class="badge bg-warning text-dark" title="{{ bug_votes }} say bug, {{ fp_votes }} say FP">
+                                                <i class="bi bi-exclamation-triangle me-1"></i>{{ bug_votes }}/{{ fp_votes }}
+                                            </span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="d-none d-md-table-cell">
+                                            <small class="text-muted">{{ finding.created_at.strftime('%Y-%m-%d') }}</small>
+                                        </td>
+                                        <td class="text-center">
+                                            <a href="{{ url_for('findings.finding_detail', finding_id=finding.id) }}" class="btn btn-sm btn-outline-primary" title="View">
+                                                <i class="bi bi-eye"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                    <tr id="noResultsRow" style="display: none;">
+                                        <td colspan="6" class="text-center py-4">
+                                            <i class="bi bi-search text-muted mb-2 d-block" style="font-size: 2rem;"></i>
+                                            <p class="text-muted mb-0">No findings match your filters</p>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        {% if project.findings|length > 10 %}
+                        <div class="card-footer text-center bg-dark border-top border-secondary py-3">
+                            <a href="{{ url_for('findings.findings_list') }}?project_id={{ project.id }}" class="btn btn-sm btn-outline-primary">
+                                View all {{ project.findings|length }} findings <i class="bi bi-arrow-right ms-1"></i>
+                            </a>
+                        </div>
+                        {% endif %}
+                </div>
+                    {% else %}
+                <div class="card-body">
+                        <div class="text-center py-5">
+                            <i class="bi bi-shield-check text-muted mb-3 d-block" style="font-size: 3rem;"></i>
+                            <p class="text-muted mb-2 fw-semibold">No findings found</p>
+                            <p class="text-muted small">Start a scan to discover security vulnerabilities</p>
+                            <button type="button" class="btn btn-success btn-sm mt-3" data-bs-toggle="modal" data-bs-target="#startScanModal">
+                                <i class="bi bi-play-circle me-1"></i>Start Scan
+                            </button>
+                        </div>
+                </div>
+                    {% endif %}
+            </div>
+
+            <!-- Fact Insights Section -->
+            {% if fact_insights and fact_insights.total > 0 %}
+            <div class="card mt-4">
+                <div class="card-header">
+                    <span><i class="bi bi-graph-up me-2"></i>Fact Insights</span>
+                </div>
+                <div class="card-body">
+                    <!-- Stats Row -->
+                    <div class="row g-3 mb-3">
+                        <div class="col-6 col-md-3">
+                            <div class="text-center p-2" style="background:#2d3338;border-radius:8px;">
+                                <div style="font-size:1.5rem;font-weight:700;color:#0dcaf0;">{{ fact_insights.total }}</div>
+                                <div style="font-size:0.75rem;color:#adb5bd;text-transform:uppercase;">Total Facts</div>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <div class="text-center p-2" style="background:#2d3338;border-radius:8px;">
+                                <div style="font-size:1.5rem;font-weight:700;color:#198754;">{{ fact_insights.covered_types }}/{{ fact_insights.total_types }}</div>
+                                <div style="font-size:0.75rem;color:#adb5bd;text-transform:uppercase;">Types Covered</div>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <div class="text-center p-2" style="background:#2d3338;border-radius:8px;">
+                                <div style="font-size:1.5rem;font-weight:700;color:#ffc107;">{{ fact_insights.coverage_pct }}%</div>
+                                <div style="font-size:0.75rem;color:#adb5bd;text-transform:uppercase;">Coverage</div>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <div class="text-center p-2" style="background:#2d3338;border-radius:8px;">
+                                <div style="font-size:1.5rem;font-weight:700;color:#dc3545;">{{ fact_insights.security_critical_count }}</div>
+                                <div style="font-size:0.75rem;color:#adb5bd;text-transform:uppercase;">Security Facts</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Type Breakdown -->
+                    <div style="font-size:0.8rem;color:#adb5bd;margin-bottom:0.5rem;text-transform:uppercase;">Breakdown by Type</div>
+                    <div class="d-flex flex-wrap gap-2">
+                        {% for fact_type, count in fact_insights.type_counts.items() %}
+                        {% set meta = fact_type_meta.get(fact_type, {'icon': 'bi-file-text', 'color': 'secondary', 'label': fact_type.replace('_', ' ').title()}) %}
+                        <span class="badge bg-{{ meta.color }}" style="font-size:0.75rem;padding:0.4rem 0.6rem;">
+                            <i class="bi {{ meta.icon }} me-1"></i>{{ meta.label }}: {{ count }}
+                        </span>
+                        {% endfor %}
+                    </div>
+                    
+                    <!-- Latest Fact -->
+                    {% if fact_insights.latest_fact %}
+                    <div style="margin-top:1rem;padding-top:1rem;border-top:1px solid #495057;">
+                        <div style="font-size:0.8rem;color:#adb5bd;margin-bottom:0.5rem;text-transform:uppercase;">Latest Fact</div>
+                        <p style="font-size:0.85rem;color:#e9ecef;margin:0;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">
+                            {{ fact_insights.latest_fact.content }}
+                        </p>
+                        <small style="color:#6c757d;">{{ fact_insights.latest_fact.created_at.strftime('%b %d, %Y %H:%M') }}</small>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Facts Section -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <span><i class="bi bi-lightbulb me-2"></i>Codebase Facts</span>
+                    <span class="badge bg-info badge-custom">{{ total_facts }}</span>
+                </div>
+                {% if total_facts > 0 %}
+                <div style="background:#2d3338;padding:0.75rem 1rem;border-bottom:1px solid #495057;display:flex;gap:0.5rem;flex-wrap:wrap;">
+                    <button class="btn btn-sm btn-primary" onclick="filterFacts('all')">All ({{ total_facts }})</button>
+                    {% for fact_type, facts in facts_by_type.items() %}
+                    {% set meta = fact_type_meta.get(fact_type, {'icon': 'bi-file-text', 'color': 'secondary', 'label': fact_type.replace('_', ' ').title()}) %}
+                    <button class="btn btn-sm btn-outline-secondary" onclick="filterFacts('{{ fact_type }}')">{{ meta.label }} ({{ facts|length }})</button>
+                    {% endfor %}
+                </div>
+                <div style="max-height:450px;overflow-y:auto;">
+                    {% for fact_type, facts in facts_by_type.items() %}
+                    {% set meta = fact_type_meta.get(fact_type, {'icon': 'bi-file-text', 'color': 'secondary', 'label': fact_type.replace('_', ' ').title()}) %}
+                    {% for fact in facts %}
+                    <div class="fact-row" data-type="{{ fact_type }}" style="padding:1rem 1.25rem;border-bottom:1px solid #495057;">
+                        <span class="badge bg-{{ meta.color }}" style="font-size:0.65rem;margin-bottom:0.5rem;">{{ meta.label }}</span>
+                        <p style="font-size:0.875rem;color:#e9ecef;line-height:1.6;margin:0 0 0.25rem 0;{% if fact.content|length > 200 %}display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;{% endif %}" id="fact-{{ fact.id }}">{{ fact.content }}</p>
+                        {% if fact.content|length > 200 %}
+                        <span style="color:#6ea8fe;font-size:0.8rem;cursor:pointer;" onclick="toggleFact({{ fact.id }})">Show more</span>
+                        {% endif %}
+                        <div style="font-size:0.75rem;color:#6c757d;margin-top:0.5rem;">{{ fact.created_at.strftime('%b %d, %Y %H:%M') }}</div>
+                    </div>
+                    {% endfor %}
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="card-body text-center py-4">
+                    <i class="bi bi-lightbulb text-muted d-block mb-2" style="font-size:2rem"></i>
+                    <p class="text-muted mb-0">No facts gathered yet</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <div class="sticky-top" style="top: 2rem;">
+                <!-- Project Information -->
+                <div class="card mb-4 sidebar-section">
+                    <div class="card-header">
+                        <span><i class="bi bi-info-circle me-2"></i>Project Information</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="info-grid">
+                            <div>
+                                <div class="info-label"><i class="bi bi-file-earmark-code me-1"></i>Input Type</div>
+                                <div class="info-value">{{ project.input_type.value.replace('_', ' ').title() }}</div>
+                            </div>
+                            <div>
+                                <div class="info-label"><i class="bi bi-calendar3 me-1"></i>Created</div>
+                                <div class="info-value">{{ project.created_at.strftime('%Y-%m-%d %H:%M') }}</div>
+                            </div>
+                            {% if project.last_scanned_at %}
+                            <div>
+                                <div class="info-label"><i class="bi bi-clock-history me-1"></i>Last Scanned</div>
+                                <div class="info-value">{{ project.last_scanned_at.strftime('%Y-%m-%d %H:%M') }}</div>
+                            </div>
+                            {% endif %}
+                            {% if project.git_link %}
+                            <div style="grid-column: 1 / -1;">
+                                <div class="info-label"><i class="bi bi-git me-1"></i>Git Repository</div>
+                                <div class="info-value git-link-container">
+                                    <a href="{{ project.git_link }}" target="_blank" rel="noopener noreferrer">
+                                        <i class="bi bi-git"></i>
+                                        <span>{{ project.git_link }}</span>
+                                        <i class="bi bi-box-arrow-up-right"></i>
+                                    </a>
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Git Information (if available) -->
+                {% if git_info %}
+                <div class="card mb-4 sidebar-section">
+                    <div class="card-header">
+                        <span><i class="bi bi-git me-2"></i>Git Information</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="info-grid">
+                            <div>
+                                <div class="info-label"><i class="bi bi-branch me-1"></i>Current Branch</div>
+                                <div class="info-value">
+                                    <span class="badge bg-primary">{{ git_info.current_branch }}</span>
+                                    {% if git_info.is_dirty %}
+                                    <span class="badge bg-warning ms-1" title="Repository has uncommitted changes">
+                                        <i class="bi bi-exclamation-circle"></i> Dirty
+                                    </span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div>
+                                <div class="info-label"><i class="bi bi-hash me-1"></i>Latest Commit</div>
+                                <div class="info-value">
+                                    <code class="text-info">{{ git_info.commit_hash_short }}</code>
+                                </div>
+                            </div>
+                            {% if git_info.commit_message %}
+                            <div style="grid-column: 1 / -1;">
+                                <div class="info-label"><i class="bi bi-chat-left-text me-1"></i>Commit Message</div>
+                                <div class="info-value" style="font-size: 0.85rem;">
+                                    {{ git_info.commit_message[:100] }}{% if git_info.commit_message|length > 100 %}...{% endif %}
+                                </div>
+                            </div>
+                            {% endif %}
+                            {% if git_info.commit_author %}
+                            <div>
+                                <div class="info-label"><i class="bi bi-person me-1"></i>Author</div>
+                                <div class="info-value" style="font-size: 0.85rem;">{{ git_info.commit_author }}</div>
+                            </div>
+                            {% endif %}
+                            {% if git_info.commit_date %}
+                            <div>
+                                <div class="info-label"><i class="bi bi-calendar-event me-1"></i>Commit Date</div>
+                                <div class="info-value" style="font-size: 0.85rem;">{{ git_info.commit_date[:10] }}</div>
+                            </div>
+                            {% endif %}
+                            {% if git_info.total_commits %}
+                            <div>
+                                <div class="info-label"><i class="bi bi-list-ol me-1"></i>Total Commits</div>
+                                <div class="info-value">{{ git_info.total_commits }}</div>
+                            </div>
+                            {% endif %}
+                            {% if git_info.branches and git_info.branches|length > 1 %}
+                            <div>
+                                <div class="info-label"><i class="bi bi-diagram-3 me-1"></i>Branches</div>
+                                <div class="info-value">{{ git_info.branches|length }} branch(es)</div>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- AI Models -->
+                {% if project.ai_models %}
+                <div class="card mb-4 sidebar-section">
+                    <div class="card-header">
+                        <span><i class="bi bi-robot me-2"></i>AI Models</span>
+                        <span class="badge bg-secondary badge-custom">{{ project.ai_models|length }}</span>
+                    </div>
+                    <div class="card-body">
+                        {% for model in project.ai_models %}
+                        <div class="mb-3 {% if not loop.last %}pb-3 border-bottom border-secondary{% endif %}">
+                            <div class="fw-bold mb-1">{{ model.model_name }}</div>
+                            <small class="text-muted">{{ model.vendor }}</small>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Threat Models -->
+                {% if project.threat_models %}
+                <div class="card mb-4 sidebar-section">
+                    <div class="card-header">
+                        <span><i class="bi bi-shield-exclamation me-2"></i>Threat Models</span>
+                        <span class="badge bg-primary badge-custom">{{ project.threat_models|length }}</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-flex flex-wrap gap-2">
+                            {% for threat in project.threat_models %}
+                            <span class="badge bg-primary badge-custom">{{ threat.replace('_', ' ').title() }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Scan Configuration -->
+                <div class="card mb-4 sidebar-section">
+                    <div class="card-header">
+                        <span><i class="bi bi-gear me-2"></i>Scan Configuration</span>
+                    </div>
+                    <div class="card-body">
+                        {% if filtered_dirs %}
+                        <div class="mb-3">
+                            <div class="info-label d-flex justify-content-between align-items-center mb-2">
+                                <span>Target Directories ({{ filtered_dirs|length }})</span>
+                                <button class="btn btn-sm btn-link text-decoration-none p-0 text-primary" type="button" data-bs-toggle="collapse" data-bs-target="#targetDirsCollapse">
+                                    <i class="bi bi-chevron-down" id="targetDirsIcon"></i>
+                                </button>
+                            </div>
+                            <div class="collapse" id="targetDirsCollapse">
+                                <div class="bg-dark rounded p-2" style="max-height: 300px; overflow-y: auto; font-family: 'Courier New', monospace; font-size: 0.85rem;">
+                                    {% for dir in filtered_dirs %}
+                                    <div class="text-light py-1 border-bottom border-secondary" style="border-bottom-width: 1px !important;">
+                                        <i class="bi bi-folder me-2 text-info"></i>{{ dir }}
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                        {% else %}
+                        <div class="mb-3">
+                            <div class="info-label">Target Directories</div>
+                            <div class="info-value text-muted">No directories found</div>
+                        </div>
+                        {% endif %}
+                        {% if project.included_dirs %}
+                        <div class="mb-3">
+                            <div class="info-label">Included Directories</div>
+                            <div class="d-flex flex-wrap gap-1">
+                                {% for dir in project.included_dirs %}
+                                <span class="badge bg-success">{{ dir }}</span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% if project.excluded_dirs %}
+                        <div>
+                            <div class="info-label d-flex justify-content-between align-items-center mb-2">
+                                <span>Excluded Directories</span>
+                                <button class="btn btn-sm btn-link text-decoration-none p-0 text-primary" type="button" data-bs-toggle="collapse" data-bs-target="#excludedDirsCollapse">
+                                    <i class="bi bi-chevron-down" id="excludedDirsIcon"></i>
+                                </button>
+                            </div>
+                            <div class="collapse" id="excludedDirsCollapse">
+                                <div class="d-flex flex-wrap gap-1" style="max-height: 200px; overflow-y: auto;">
+                                    {% for dir in project.excluded_dirs %}
+                                    <span class="badge bg-secondary">{{ dir }}</span>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Project Details -->
+                <div class="card sidebar-section">
+                    <div class="card-header">
+                        <span><i class="bi bi-info-circle me-2"></i>Details</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <div class="info-label"><i class="bi bi-currency-dollar me-1"></i>Cost</div>
+                            <div class="info-value">${{ "%.2f"|format(project.cost or 0) }}</div>
+                        </div>
+                        {% if project.max_cost %}
+                        <div class="mb-3">
+                            <div class="info-label"><i class="bi bi-currency-dollar me-1"></i>Max Cost</div>
+                            <div class="info-value">${{ "%.2f"|format(project.max_cost) }}</div>
+                        </div>
+                        {% endif %}
+                        {% if project.last_scanned_at %}
+                        <div class="mb-3">
+                            <div class="info-label"><i class="bi bi-clock-history me-1"></i>Last Scanned</div>
+                            <div class="info-value">{{ project.last_scanned_at.strftime('%Y-%m-%d %H:%M') }}</div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Start Scan Modal -->
+<div class="modal fade" id="startScanModal" tabindex="-1" aria-labelledby="startScanModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="startScanModalLabel">Start Security Scan</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="scanModelSelect" class="form-label">Select AI Model</label>
+                    <select class="form-select" id="scanModelSelect" required>
+                        <option value="">Loading models...</option>
+                    </select>
+                </div>
+                <div id="scanStatus" class="alert d-none" role="alert"></div>
+                <div id="scanOutput" class="d-none">
+                    <label class="form-label">Scan Output:</label>
+                    <pre class="bg-dark text-light p-3 rounded" style="max-height: 200px; overflow-y: auto; font-size: 0.85rem;" id="scanOutputText"></pre>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-success" id="startScanBtn">
+                    <i class="bi bi-play-circle me-1"></i>Start Scan
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bulk Validate Modal -->
+<div class="modal fade" id="bulkValidateModal" tabindex="-1" aria-labelledby="bulkValidateModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="bulkValidateModalLabel">
+                    <i class="bi bi-check2-all me-2"></i>Validate All Findings
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info mb-3">
+                    <i class="bi bi-info-circle me-2"></i>
+                    This will validate all findings that haven't been confirmed by the selected model yet.
+                    Findings already validated by this model will be skipped.
+                </div>
+                <div class="mb-3">
+                    <label for="validateModelSelect" class="form-label">Select AI Model</label>
+                    <select class="form-select" id="validateModelSelect" required>
+                        <option value="">Loading models...</option>
+                    </select>
+                </div>
+                <div id="validateStatus" class="alert d-none" role="alert"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-info" id="startBulkValidateBtn">
+                    <i class="bi bi-check2-all me-1"></i>Start Validation
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+{% if analytics.severity_counts or analytics.top_files %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+(function() {
+    const analytics = {{ analytics|tojson|safe }};
+    const severityColor = { 'critical': '#dc3545', 'high': '#ffc107', 'medium': '#0dcaf0', 'low': '#198754', 'info':'#6c757d' };
+    
+    const sevLabels = Object.keys(analytics.severity_counts);
+    const sevCounts = Object.values(analytics.severity_counts);
+    new Chart(document.getElementById('severityChart').getContext('2d'), {
+        type: 'doughnut',
+        data: { 
+            labels: sevLabels, 
+            datasets: [{
+                data: sevCounts,
+                backgroundColor: sevLabels.map(s => severityColor[s] || '#495057'),
+            }]
+        },
+        options: {
+            maintainAspectRatio: false,
+            plugins: { 
+                legend: { 
+                    position: 'bottom', 
+                    labels: { color: '#fff', font: { size: 11 }, padding: 10 }
+                } 
+            }
+        }
+    });
+    
+    const topFiles = analytics.top_files;
+    new Chart(document.getElementById('fileFindingsChart').getContext('2d'), {
+        type: 'bar',
+        data: {
+            labels: topFiles.map(f => f[0].length > 25 ? '...' + f[0].slice(-25) : f[0]),
+            datasets: [{
+                data: topFiles.map(f => f[1]),
+                backgroundColor: '#0d6efd',
+            }]
+        },
+        options: {
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: { 
+                x: { ticks: { color: '#fff', font: { size: 10 } }, grid: { display: false } }, 
+                y: { beginAtZero: true, ticks: { color: '#fff', font: { size: 10 } }, grid: { color: 'rgba(255,255,255,0.1)' } } 
+            }
+        }
+    });
+})();
+</script>
+{% endif %}
+<script>
+// Toggle fact expand/collapse
+function toggleFact(id) {
+    const el = document.getElementById('fact-' + id);
+    const toggle = el.nextElementSibling;
+    if (el.style.webkitLineClamp === 'unset' || el.style.webkitLineClamp === '') {
+        el.style.display = '-webkit-box';
+        el.style.webkitLineClamp = '2';
+        el.style.webkitBoxOrient = 'vertical';
+        el.style.overflow = 'hidden';
+        toggle.textContent = 'Show more';
+    } else {
+        el.style.display = 'block';
+        el.style.webkitLineClamp = 'unset';
+        el.style.overflow = 'visible';
+        toggle.textContent = 'Show less';
+    }
+}
+
+// Filter facts by type
+function filterFacts(type) {
+    document.querySelectorAll('.fact-row').forEach(row => {
+        row.style.display = (type === 'all' || row.dataset.type === type) ? '' : 'none';
+    });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Handle excluded directories collapse
+    const excludedCollapse = document.getElementById('excludedDirsCollapse');
+    const excludedIcon = document.getElementById('excludedDirsIcon');
+    if (excludedCollapse && excludedIcon) {
+        excludedCollapse.addEventListener('show.bs.collapse', () => {
+            excludedIcon.classList.replace('bi-chevron-down', 'bi-chevron-up');
+        });
+        excludedCollapse.addEventListener('hide.bs.collapse', () => {
+            excludedIcon.classList.replace('bi-chevron-up', 'bi-chevron-down');
+        });
+    }
+    
+    // Handle target directories collapse
+    const targetCollapse = document.getElementById('targetDirsCollapse');
+    const targetIcon = document.getElementById('targetDirsIcon');
+    if (targetCollapse && targetIcon) {
+        targetCollapse.addEventListener('show.bs.collapse', () => {
+            targetIcon.classList.replace('bi-chevron-down', 'bi-chevron-up');
+        });
+        targetCollapse.addEventListener('hide.bs.collapse', () => {
+            targetIcon.classList.replace('bi-chevron-up', 'bi-chevron-down');
+        });
+    }
+    
+
+    // Load AI models when modal opens
+    const scanModal = document.getElementById('startScanModal');
+    const modelSelect = document.getElementById('scanModelSelect');
+    const startScanBtn = document.getElementById('startScanBtn');
+    const scanStatus = document.getElementById('scanStatus');
+    const scanOutput = document.getElementById('scanOutput');
+    const scanOutputText = document.getElementById('scanOutputText');
+
+    // Bulk validation elements
+    const bulkValidateModal = document.getElementById('bulkValidateModal');
+    const validateModelSelect = document.getElementById('validateModelSelect');
+    const startBulkValidateBtn = document.getElementById('startBulkValidateBtn');
+    const validateStatus = document.getElementById('validateStatus');
+
+    scanModal.addEventListener('show.bs.modal', function() {
+        loadAIModels(modelSelect);
+        scanStatus.classList.add('d-none');
+        scanOutput.classList.add('d-none');
+        startScanBtn.disabled = false;
+    });
+
+    if (bulkValidateModal) {
+        bulkValidateModal.addEventListener('show.bs.modal', function() {
+            loadAIModels(validateModelSelect);
+            validateStatus.classList.add('d-none');
+            startBulkValidateBtn.disabled = false;
+            startBulkValidateBtn.innerHTML = '<i class="bi bi-check2-all me-1"></i>Start Validation';
+        });
+    }
+
+    function loadAIModels(selectElement) {
+        selectElement.innerHTML = '<option value="">Loading...</option>';
+        fetch('/api/ai-models')
+            .then(response => response.json())
+            .then(data => {
+                if (!data.models || data.models.length === 0) {
+                    selectElement.innerHTML = '<option value="">-- No AI models configured --</option>';
+                    ['startScanBtn','startBulkValidateBtn'].forEach(function(btnId){
+                        var btn = document.getElementById(btnId);
+                        if (btn) { btn.disabled = true; btn.title = 'Add an API key in AI Models first'; }
+                    });
+                    ['scanStatus','validateStatus'].forEach(function(sid){
+                        var el = document.getElementById(sid);
+                        if (el) {
+                            el.className = 'alert alert-warning mt-2';
+                            el.innerHTML = '<i class="bi bi-exclamation-triangle me-2"></i>No AI models configured. <a href="/ai-models">Add an API key</a> to enable scanning.';
+                            el.classList.remove('d-none');
+                        }
+                    });
+                    return;
+                }
+                selectElement.innerHTML = '<option value="">Select an AI Model</option>';
+                data.models.forEach(model => {
+                    const option = document.createElement('option');
+                    option.value = model.id;
+                    option.textContent = model.vendor + '/' + model.model_name + ' (' + model.api_key_suffix + ')';
+                    selectElement.appendChild(option);
+                });
+            })
+            .catch(error => {
+                console.error('Error loading AI models:', error);
+                selectElement.innerHTML = '<option value="">Error loading models</option>';
+            });
+    }
+
+    // Handle resync button
+    const resyncProjectBtn = document.getElementById('resyncProjectBtn');
+    if (resyncProjectBtn) {
+        resyncProjectBtn.addEventListener('click', function() {
+            if (!confirm('Are you sure you want to resync this project? This will remove the current codebase and re-clone it from the git repository. This action cannot be undone.')) {
+                return;
+            }
+
+            resyncProjectBtn.disabled = true;
+            resyncProjectBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Resyncing...';
+
+            fetch(`/projects/{{ project.id }}/resync`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Project resynced successfully! The page will now reload.');
+                    window.location.reload();
+                } else {
+                    alert('Error resyncing project: ' + (data.error || 'Unknown error'));
+                    resyncProjectBtn.disabled = false;
+                    resyncProjectBtn.innerHTML = '<i class="bi bi-arrow-clockwise me-1"></i>Resync';
+                }
+            })
+            .catch(error => {
+                console.error('Error resyncing project:', error);
+                alert('Error resyncing project: ' + error.message);
+                resyncProjectBtn.disabled = false;
+                resyncProjectBtn.innerHTML = '<i class="bi bi-arrow-clockwise me-1"></i>Resync';
+            });
+        });
+    }
+
+    // Findings filtering
+    const findingsSearch = document.getElementById('findingsSearch');
+    const findingsSeverityFilter = document.getElementById('findingsSeverityFilter');
+    const findingsStatusFilter = document.getElementById('findingsStatusFilter');
+    const clearFiltersBtn = document.getElementById('clearFiltersBtn');
+    const findingsTableBody = document.getElementById('findingsTableBody');
+    const findingsCount = document.getElementById('findingsCount');
+    const totalFindings = {{ project.findings|length }};
+
+    function filterFindings() {
+        if (!findingsTableBody) return;
+        
+        const searchTerm = findingsSearch ? findingsSearch.value.toLowerCase() : '';
+        const severityFilter = findingsSeverityFilter ? findingsSeverityFilter.value : '';
+        const statusFilter = findingsStatusFilter ? findingsStatusFilter.value : '';
+        
+        const rows = findingsTableBody.querySelectorAll('.finding-row');
+        let visibleCount = 0;
+        
+        rows.forEach(row => {
+            const severity = row.dataset.severity || '';
+            const status = row.dataset.status || '';
+            const title = row.dataset.title || '';
+            const description = row.dataset.description || '';
+            
+            let show = true;
+            
+            // Severity filter
+            if (severityFilter && severity !== severityFilter) {
+                show = false;
+            }
+            
+            // Status filter
+            if (statusFilter && status !== statusFilter) {
+                show = false;
+            }
+            
+            // Search filter
+            if (searchTerm) {
+                if (!title.includes(searchTerm) && !description.includes(searchTerm)) {
+                    show = false;
+                }
+            }
+            
+            row.style.display = show ? '' : 'none';
+            if (show) visibleCount++;
+        });
+        
+        // Update count badge
+        if (findingsCount) {
+            findingsCount.textContent = `${visibleCount} ${visibleCount === 1 ? 'finding' : 'findings'}`;
+        }
+        
+        // Show/hide no results message
+        const noResultsRow = document.getElementById('noResultsRow');
+        if (noResultsRow) {
+            noResultsRow.style.display = visibleCount === 0 ? '' : 'none';
+        }
+    }
+    
+    if (findingsSearch) {
+        findingsSearch.addEventListener('input', filterFindings);
+    }
+    
+    if (findingsSeverityFilter) {
+        findingsSeverityFilter.addEventListener('change', filterFindings);
+    }
+    
+    if (findingsStatusFilter) {
+        findingsStatusFilter.addEventListener('change', filterFindings);
+    }
+    
+    if (clearFiltersBtn) {
+        clearFiltersBtn.addEventListener('click', function() {
+            if (findingsSearch) findingsSearch.value = '';
+            if (findingsSeverityFilter) findingsSeverityFilter.value = '';
+            if (findingsStatusFilter) findingsStatusFilter.value = '';
+            filterFindings();
+        });
+    }
+
+    startScanBtn.addEventListener('click', function() {
+        const modelId = modelSelect.value;
+        if (!modelId) {
+            scanStatus.className = 'alert alert-warning';
+            scanStatus.textContent = 'Please select an AI model';
+            scanStatus.classList.remove('d-none');
+            return;
+        }
+
+        startScanBtn.disabled = true;
+        startScanBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Starting...';
+        scanStatus.classList.add('d-none');
+        scanOutput.classList.add('d-none');
+
+        fetch(`/projects/{{ project.id }}/start-scan`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ model_id: parseInt(modelId) })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                if (data.already_running) {
+                    scanStatus.className = 'alert alert-info';
+                    scanStatus.textContent = 'Scan is already running';
+                    scanStatus.classList.remove('d-none');
+                    if (data.output) {
+                        scanOutputText.textContent = data.output;
+                        scanOutput.classList.remove('d-none');
+                    }
+                } else {
+                    scanStatus.className = 'alert alert-success';
+                    let message = 'Scan started successfully';
+                    if (data.command) {
+                        message += '\n\nCommand: ' + data.command;
+                    }
+                    if (data.pid) {
+                        message += '\nProcess ID: ' + data.pid;
+                    }
+                    if (data.log_file) {
+                        message += '\nLog file: ' + data.log_file;
+                    }
+                    scanStatus.textContent = message;
+                    scanStatus.style.whiteSpace = 'pre-line';
+                    scanStatus.classList.remove('d-none');
+                }
+            } else {
+                scanStatus.className = 'alert alert-danger';
+                scanStatus.textContent = data.error || 'Failed to start scan';
+                scanStatus.classList.remove('d-none');
+            }
+            startScanBtn.disabled = false;
+            startScanBtn.innerHTML = '<i class="bi bi-play-circle me-1"></i>Start Scan';
+        })
+        .catch(error => {
+            console.error('Error starting scan:', error);
+            scanStatus.className = 'alert alert-danger';
+            scanStatus.textContent = 'Error starting scan: ' + error.message;
+            scanStatus.classList.remove('d-none');
+            startScanBtn.disabled = false;
+            startScanBtn.innerHTML = '<i class="bi bi-play-circle me-1"></i>Start Scan';
+        });
+    });
+
+    // Bulk validation button handler
+    if (startBulkValidateBtn) {
+        startBulkValidateBtn.addEventListener('click', function() {
+            const modelId = validateModelSelect.value;
+            if (!modelId) {
+                validateStatus.className = 'alert alert-warning';
+                validateStatus.textContent = 'Please select an AI model';
+                validateStatus.classList.remove('d-none');
+                return;
+            }
+
+            startBulkValidateBtn.disabled = true;
+            startBulkValidateBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Starting...';
+            validateStatus.classList.add('d-none');
+
+            fetch(`/api/projects/{{ project.id }}/start-bulk-validation`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ model_id: parseInt(modelId) })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    validateStatus.className = 'alert alert-success';
+                    let message = `Bulk validation started for ${data.unconfirmed_count} findings`;
+                    if (data.total_findings) {
+                        message += ` (out of ${data.total_findings} total)`;
+                    }
+                    validateStatus.innerHTML = message + '<br><small class="text-muted">Redirecting to status page...</small>';
+                    validateStatus.classList.remove('d-none');
+                    
+                    // Redirect to status page after a short delay
+                    setTimeout(() => {
+                        window.location.href = '/status';
+                    }, 1500);
+                } else {
+                    if (data.already_running) {
+                        validateStatus.className = 'alert alert-info';
+                        validateStatus.textContent = 'Bulk validation is already running for this project with this model';
+                    } else {
+                        validateStatus.className = 'alert alert-danger';
+                        validateStatus.textContent = data.error || 'Failed to start bulk validation';
+                    }
+                    validateStatus.classList.remove('d-none');
+                    startBulkValidateBtn.disabled = false;
+                    startBulkValidateBtn.innerHTML = '<i class="bi bi-check2-all me-1"></i>Start Validation';
+                }
+            })
+            .catch(error => {
+                console.error('Error starting bulk validation:', error);
+                validateStatus.className = 'alert alert-danger';
+                validateStatus.textContent = 'Error starting bulk validation: ' + error.message;
+                validateStatus.classList.remove('d-none');
+                startBulkValidateBtn.disabled = false;
+                startBulkValidateBtn.innerHTML = '<i class="bi bi-check2-all me-1"></i>Start Validation';
+            });
+        });
+    }
+});
+
+// Add MCP to Cursor button handler
+document.addEventListener('DOMContentLoaded', function() {
+    const addMcpBtn = document.getElementById('addMcpToCursorBtn');
+    if (addMcpBtn) {
+        addMcpBtn.addEventListener('click', function() {
+            const projectId = {{ project.id }};
+            const projectName = "{{ project.name }}";
+            
+            // Create the MCP config with command (embedded server)
+            const mcpConfig = {
+                command: "python",
+                args: ["mcp_servers/findings_server.py"],
+                env: {
+                    PROJECT_ID: projectId.toString(),
+                    BASE_URL: "http://localhost:5555"
+                }
+            };
+            
+            // Base64 encode the config
+            const configJson = JSON.stringify(mcpConfig);
+            const configBase64 = btoa(configJson);
+            
+            // Create the deep link with sanitized project name
+            const sanitizedName = projectName.replace(/[^a-zA-Z0-9]/g, '-');
+            const deepLink = `cursor://anysphere.cursor-deeplink/mcp/install?name=Findings&config=${configBase64}`;
+            
+            // Open the deep link - Cursor will automatically start the embedded server
+            window.location.href = deepLink;
+        });
+    }
+});
+</script>
+{% endblock %}

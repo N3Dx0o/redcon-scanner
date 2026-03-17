@@ -1,0 +1,632 @@
+{% extends "base.html" %}
+
+{% block title %}Findings - Security Scanner{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <div>
+                    <h1 class="h3 mb-1">Security Findings</h1>
+                    <p class="text-muted mb-0">
+                        <span class="badge bg-primary me-2">{{ findings_count }} findings</span>
+                        Review and manage security vulnerabilities
+                    </p>
+                </div>
+                <div class="d-flex gap-2">
+                    <a href="{{ url_for('findings.findings_navigate') }}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left-right me-1"></i>Navigate Mode
+                    </a>
+                    <div class="btn-group" role="group">
+                        <button type="button" class="btn btn-outline-primary active" id="viewToggleCard" data-view="card">
+                            <i class="bi bi-grid-3x3-gap me-1"></i>Cards
+                        </button>
+                        <button type="button" class="btn btn-outline-primary" id="viewToggleTable" data-view="table">
+                            <i class="bi bi-table me-1"></i>Table
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Validation Insights Cards -->
+    <div class="row mb-4">
+        <div class="col-md-2 col-sm-6 mb-3">
+            <div class="card text-center h-100 border-danger" style="cursor: pointer;" onclick="setValidationFilter('confirmed_bug')">
+                <div class="card-body py-3">
+                    <div class="h3 text-danger mb-1">{{ insights.confirmed_bugs if insights else 0 }}</div>
+                    <div class="small text-muted">
+                        <i class="bi bi-bug-fill me-1"></i>Confirmed Bugs
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2 col-sm-6 mb-3">
+            <div class="card text-center h-100 border-success" style="cursor: pointer;" onclick="setValidationFilter('false_positive')">
+                <div class="card-body py-3">
+                    <div class="h3 text-success mb-1">{{ insights.false_positives if insights else 0 }}</div>
+                    <div class="small text-muted">
+                        <i class="bi bi-shield-x me-1"></i>False Positives
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2 col-sm-6 mb-3">
+            <div class="card text-center h-100 border-warning" style="cursor: pointer;" onclick="setValidationFilter('conflicting')">
+                <div class="card-body py-3">
+                    <div class="h3 text-warning mb-1">{{ insights.conflicting if insights else 0 }}</div>
+                    <div class="small text-muted">
+                        <i class="bi bi-exclamation-triangle me-1"></i>Conflicting
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2 col-sm-6 mb-3">
+            <div class="card text-center h-100 border-secondary" style="cursor: pointer;" onclick="setValidationFilter('pending')">
+                <div class="card-body py-3">
+                    <div class="h3 text-secondary mb-1">{{ insights.pending if insights else 0 }}</div>
+                    <div class="small text-muted">
+                        <i class="bi bi-hourglass-split me-1"></i>Pending
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2 col-sm-6 mb-3">
+            <div class="card text-center h-100 border-info" style="cursor: pointer;" onclick="toggleRemoteAttack()">
+                <div class="card-body py-3">
+                    <div class="h3 text-info mb-1">{{ insights.with_remote_attack if insights else 0 }}</div>
+                    <div class="small text-muted">
+                        <i class="bi bi-globe me-1"></i>Remote Attack
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2 col-sm-6 mb-3">
+            <div class="card text-center h-100 border-primary">
+                <div class="card-body py-3">
+                    <div class="h3 text-primary mb-1">{{ insights.total_confirmations if insights else 0 }}</div>
+                    <div class="small text-muted">
+                        <i class="bi bi-robot me-1"></i>Validations
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Severity Summary -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body py-2">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <div class="d-flex gap-3">
+                            <span class="badge severity-critical fs-6" style="cursor: pointer;" onclick="setSeverityFilter('critical')">
+                                <i class="bi bi-exclamation-octagon me-1"></i>Critical: {{ findings|selectattr('severity.value', 'equalto', 'critical')|list|length }}
+                            </span>
+                            <span class="badge severity-high fs-6" style="cursor: pointer;" onclick="setSeverityFilter('high')">
+                                <i class="bi bi-exclamation-triangle me-1"></i>High: {{ findings|selectattr('severity.value', 'equalto', 'high')|list|length }}
+                            </span>
+                            <span class="badge severity-medium fs-6" style="cursor: pointer;" onclick="setSeverityFilter('medium')">
+                                <i class="bi bi-info-circle me-1"></i>Medium: {{ findings|selectattr('severity.value', 'equalto', 'medium')|list|length }}
+                            </span>
+                            <span class="badge severity-low fs-6" style="cursor: pointer;" onclick="setSeverityFilter('low')">
+                                <i class="bi bi-check-circle me-1"></i>Low: {{ findings|selectattr('severity.value', 'equalto', 'low')|list|length }}
+                            </span>
+                            <span class="badge severity-info fs-6" style="cursor: pointer;" onclick="setSeverityFilter('info')">
+                                <i class="bi bi-info-lg me-1"></i>Info: {{ findings|selectattr('severity.value', 'equalto', 'info')|list|length }}
+                            </span>
+                        </div>
+                        <button class="btn btn-sm btn-outline-secondary" onclick="clearAllFilters()">
+                            <i class="bi bi-x-circle me-1"></i>Clear Filters
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h6 class="mb-0"><i class="bi bi-funnel me-2"></i>Filters</h6>
+            <button class="btn btn-sm btn-link" type="button" data-bs-toggle="collapse" data-bs-target="#advancedFilters">
+                <i class="bi bi-sliders me-1"></i>Advanced
+            </button>
+        </div>
+        <div class="card-body">
+            <!-- Basic Filters Row -->
+            <div class="row g-3 mb-3">
+                <div class="col-md-2">
+                    <label for="severityFilter" class="form-label small">Severity</label>
+                    <select class="form-select form-select-sm" id="severityFilter">
+                        <option value="">All Severities</option>
+                        <option value="critical" {% if current_filters.severity == 'critical' %}selected{% endif %}>Critical</option>
+                        <option value="high" {% if current_filters.severity == 'high' %}selected{% endif %}>High</option>
+                        <option value="medium" {% if current_filters.severity == 'medium' %}selected{% endif %}>Medium</option>
+                        <option value="low" {% if current_filters.severity == 'low' %}selected{% endif %}>Low</option>
+                        <option value="info" {% if current_filters.severity == 'info' %}selected{% endif %}>Info</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label for="statusFilter" class="form-label small">Status</label>
+                    <select class="form-select form-select-sm" id="statusFilter">
+                        <option value="">All Statuses</option>
+                        <option value="open" {% if current_filters.status == 'open' %}selected{% endif %}>Open</option>
+                        <option value="in_progress" {% if current_filters.status == 'in_progress' %}selected{% endif %}>In Progress</option>
+                        <option value="resolved" {% if current_filters.status == 'resolved' %}selected{% endif %}>Resolved</option>
+                        <option value="false_positive" {% if current_filters.status == 'false_positive' %}selected{% endif %}>False Positive</option>
+                        <option value="ignored" {% if current_filters.status == 'ignored' %}selected{% endif %}>Ignored</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label for="validationStatusFilter" class="form-label small">Validation Status</label>
+                    <select class="form-select form-select-sm" id="validationStatusFilter">
+                        <option value="">All Validation</option>
+                        <option value="confirmed_bug" {% if current_filters.validation_status == 'confirmed_bug' %}selected{% endif %}>Confirmed Bug</option>
+                        <option value="false_positive" {% if current_filters.validation_status == 'false_positive' %}selected{% endif %}>False Positive</option>
+                        <option value="conflicting" {% if current_filters.validation_status == 'conflicting' %}selected{% endif %}>Conflicting</option>
+                        <option value="pending" {% if current_filters.validation_status == 'pending' %}selected{% endif %}>Pending</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label for="projectFilter" class="form-label small">Project</label>
+                    <select class="form-select form-select-sm" id="projectFilter">
+                        <option value="">All Projects</option>
+                        {% for project in projects %}
+                        <option value="{{ project.id }}" {% if current_filters.project_id|string == project.id|string %}selected{% endif %}>{{ project.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label for="searchInput" class="form-label small">Search</label>
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text"><i class="bi bi-search"></i></span>
+                        <input type="text" class="form-control" id="searchInput" placeholder="Search title or description..." value="{{ current_filters.search or '' }}">
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Advanced Filters (Collapsible) -->
+            <div class="collapse {% if current_filters.file_path or current_filters.date_from or current_filters.date_to or current_filters.confirmation_count or current_filters.unanimous_only %}show{% endif %}" id="advancedFilters">
+                <hr class="my-3">
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <label for="filePathFilter" class="form-label small">File Path</label>
+                        <input type="text" class="form-control form-control-sm" id="filePathFilter" list="filePathList" placeholder="Filter by file path..." value="{{ current_filters.file_path or '' }}">
+                        <datalist id="filePathList">
+                            {% for fp in unique_file_paths %}
+                            <option value="{{ fp }}">
+                            {% endfor %}
+                        </datalist>
+                    </div>
+                    <div class="col-md-2">
+                        <label for="dateFromFilter" class="form-label small">From Date</label>
+                        <input type="date" class="form-control form-control-sm" id="dateFromFilter" value="{{ current_filters.date_from or '' }}">
+                    </div>
+                    <div class="col-md-2">
+                        <label for="dateToFilter" class="form-label small">To Date</label>
+                        <input type="date" class="form-control form-control-sm" id="dateToFilter" value="{{ current_filters.date_to or '' }}">
+                    </div>
+                    <div class="col-md-2">
+                        <label for="confirmationCountFilter" class="form-label small">Validations #</label>
+                        <select class="form-select form-select-sm" id="confirmationCountFilter">
+                            <option value="">Any Count</option>
+                            <option value="0" {% if current_filters.confirmation_count == '0' %}selected{% endif %}>None (0)</option>
+                            <option value="1" {% if current_filters.confirmation_count == '1' %}selected{% endif %}>1 validation</option>
+                            <option value="2" {% if current_filters.confirmation_count == '2' %}selected{% endif %}>2 validations</option>
+                            <option value="3+" {% if current_filters.confirmation_count == '3+' %}selected{% endif %}>3+ validations</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small d-block">Options</label>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="checkbox" id="unanimousFilter" {% if current_filters.unanimous_only %}checked{% endif %}>
+                            <label class="form-check-label small" for="unanimousFilter">
+                                Unanimous Only
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Confirmation Specific Filters -->
+                <div class="row g-3 mt-2">
+                    <div class="col-12">
+                        <div class="d-flex flex-wrap gap-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="withConfirmationsFilter" {% if current_filters.with_confirmations %}checked{% endif %}>
+                                <label class="form-check-label small" for="withConfirmationsFilter">
+                                    <i class="bi bi-check-circle text-success me-1"></i>With Validations
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="withoutConfirmationsFilter" {% if current_filters.without_confirmations %}checked{% endif %}>
+                                <label class="form-check-label small" for="withoutConfirmationsFilter">
+                                    <i class="bi bi-x-circle text-danger me-1"></i>Without Validations
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="remoteAttackFilter" {% if current_filters.remote_attack %}checked{% endif %}>
+                                <label class="form-check-label small" for="remoteAttackFilter">
+                                    <i class="bi bi-globe text-info me-1"></i>Remote Attack
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="notRemoteAttackFilter" {% if current_filters.not_remote_attack %}checked{% endif %}>
+                                <label class="form-check-label small" for="notRemoteAttackFilter">
+                                    <i class="bi bi-pc-display text-secondary me-1"></i>Local Only
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if findings %}
+        <!-- Active Filters Display -->
+        {% if current_filters and (current_filters.severity or current_filters.status or current_filters.validation_status or current_filters.project_id or current_filters.search or current_filters.file_path) %}
+        <div class="mb-3">
+            <span class="text-muted small">Active filters:</span>
+            {% if current_filters.severity %}
+            <span class="badge bg-secondary me-1">Severity: {{ current_filters.severity }}</span>
+            {% endif %}
+            {% if current_filters.status %}
+            <span class="badge bg-secondary me-1">Status: {{ current_filters.status }}</span>
+            {% endif %}
+            {% if current_filters.validation_status %}
+            <span class="badge bg-secondary me-1">Validation: {{ current_filters.validation_status }}</span>
+            {% endif %}
+            {% if current_filters.project_id %}
+            <span class="badge bg-secondary me-1">Project: {{ current_filters.project_id }}</span>
+            {% endif %}
+            {% if current_filters.search %}
+            <span class="badge bg-secondary me-1">Search: {{ current_filters.search }}</span>
+            {% endif %}
+            {% if current_filters.file_path %}
+            <span class="badge bg-secondary me-1">File: {{ current_filters.file_path }}</span>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <!-- Card View -->
+        <div id="cardView" class="row">
+            {% for finding in findings %}
+            <div class="col-lg-4 col-md-6 mb-4 finding-card" 
+                 data-severity="{{ finding.severity.value }}" 
+                 data-status="{{ finding.status.value }}" 
+                 data-project="{{ finding.project_id }}"
+                 data-validation="{{ finding.validation_status }}">
+                <div class="card h-100">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <div class="d-flex gap-2 align-items-center">
+                            <span class="badge severity-{{ finding.severity.value }}">{{ finding.severity.value.title() }}</span>
+                            <!-- Validation Status Badge -->
+                            {% if finding.validation_status == 'confirmed_bug' %}
+                            <span class="badge bg-danger" title="All validations confirm this is a bug">
+                                <i class="bi bi-bug-fill"></i>
+                            </span>
+                            {% elif finding.validation_status == 'false_positive' %}
+                            <span class="badge bg-success" title="All validations marked as false positive">
+                                <i class="bi bi-shield-x"></i>
+                            </span>
+                            {% elif finding.validation_status == 'conflicting' %}
+                            <span class="badge bg-warning text-dark" title="Validations have conflicting results">
+                                <i class="bi bi-exclamation-triangle"></i>
+                            </span>
+                            {% else %}
+                            <span class="badge bg-secondary" title="No validations yet">
+                                <i class="bi bi-hourglass-split"></i>
+                            </span>
+                            {% endif %}
+                        </div>
+                        <span class="badge status-{{ finding.status.value.replace('_', '-') }}">{{ finding.status.value.replace('_', ' ').title() }}</span>
+                    </div>
+                    <div class="card-body">
+                        <h6 class="card-title">{{ finding.title }}</h6>
+                        <p class="card-text text-muted small">{{ finding.description[:120] }}{% if finding.description|length > 120 %}...{% endif %}</p>
+                        
+                        <div class="mb-2">
+                            <small class="text-muted">
+                                <i class="bi bi-folder me-1"></i>
+                                {{ finding.project.name }}
+                            </small>
+                        </div>
+                        
+                        <div class="mb-2">
+                            <small class="text-muted text-truncate d-block" title="{{ finding.file_path }}">
+                                <i class="bi bi-file-text me-1"></i>
+                                {{ finding.file_path|truncate(40) }}
+                            </small>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between align-items-center">
+                            <small class="text-muted">
+                                <i class="bi bi-calendar me-1"></i>
+                                {{ finding.created_at.strftime('%Y-%m-%d') }}
+                            </small>
+                            
+                            {% if finding.confirmations %}
+                            <div class="d-flex gap-1">
+                                <span class="badge bg-primary" title="{{ finding.confirmations|length }} validation(s)">
+                                    <i class="bi bi-robot me-1"></i>{{ finding.confirmations|length }}
+                                </span>
+                                {% set remote_count = finding.confirmations|selectattr('is_remote_attack')|list|length %}
+                                {% if remote_count > 0 %}
+                                <span class="badge bg-info" title="{{ remote_count }} remote attack(s)">
+                                    <i class="bi bi-globe"></i>
+                                </span>
+                                {% endif %}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="card-footer bg-transparent">
+                        <a href="{{ url_for('findings.finding_detail', finding_id=finding.id) }}" class="btn btn-primary btn-sm w-100">
+                            <i class="bi bi-eye me-1"></i>View Details
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Table View -->
+        <div id="tableView" class="card" style="display: none;">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Title</th>
+                                <th>Severity</th>
+                                <th>Validation</th>
+                                <th>Status</th>
+                                <th>Project</th>
+                                <th>File</th>
+                                <th>Created</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for finding in findings %}
+                            <tr data-severity="{{ finding.severity.value }}" 
+                                data-status="{{ finding.status.value }}" 
+                                data-project="{{ finding.project_id }}"
+                                data-validation="{{ finding.validation_status }}">
+                                <td>
+                                    <div class="fw-bold">{{ finding.title|truncate(50) }}</div>
+                                    <small class="text-muted">{{ finding.description[:60] }}{% if finding.description|length > 60 %}...{% endif %}</small>
+                                </td>
+                                <td>
+                                    <span class="badge severity-{{ finding.severity.value }}">{{ finding.severity.value.title() }}</span>
+                                </td>
+                                <td>
+                                    {% if finding.validation_status == 'confirmed_bug' %}
+                                    <span class="badge bg-danger">
+                                        <i class="bi bi-bug-fill me-1"></i>Bug ({{ finding.confirmations|length }})
+                                    </span>
+                                    {% elif finding.validation_status == 'false_positive' %}
+                                    <span class="badge bg-success">
+                                        <i class="bi bi-shield-x me-1"></i>FP ({{ finding.confirmations|length }})
+                                    </span>
+                                    {% elif finding.validation_status == 'conflicting' %}
+                                    <span class="badge bg-warning text-dark">
+                                        <i class="bi bi-exclamation-triangle me-1"></i>Conflict ({{ finding.confirmations|length }})
+                                    </span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">
+                                        <i class="bi bi-hourglass-split me-1"></i>Pending
+                                    </span>
+                                    {% endif %}
+                                    {% if finding.confirmations %}
+                                        {% set remote_count = finding.confirmations|selectattr('is_remote_attack')|list|length %}
+                                        {% if remote_count > 0 %}
+                                        <span class="badge bg-info ms-1" title="Remote attack">
+                                            <i class="bi bi-globe"></i>
+                                        </span>
+                                        {% endif %}
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="badge status-{{ finding.status.value.replace('_', '-') }}">{{ finding.status.value.replace('_', ' ').title() }}</span>
+                                </td>
+                                <td><small>{{ finding.project.name }}</small></td>
+                                <td>
+                                    <small class="text-muted" title="{{ finding.file_path }}">{{ finding.file_path|truncate(25) }}</small>
+                                </td>
+                                <td><small>{{ finding.created_at.strftime('%Y-%m-%d') }}</small></td>
+                                <td>
+                                    <a href="{{ url_for('findings.finding_detail', finding_id=finding.id) }}" class="btn btn-primary btn-sm">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    {% else %}
+        <!-- Empty State -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body text-center py-5">
+                        <i class="bi bi-bug display-1 text-muted mb-4"></i>
+                        <h4 class="text-muted mb-3">No Findings Found</h4>
+                        <p class="text-muted mb-4">
+                            {% if current_filters and (current_filters.severity or current_filters.status or current_filters.validation_status or current_filters.project_id or current_filters.search) %}
+                            No findings match your current filters. Try adjusting your filter criteria.
+                            {% else %}
+                            No security findings have been detected yet. Create a project and run analysis to get started.
+                            {% endif %}
+                        </p>
+                        <div class="d-flex gap-2 justify-content-center">
+                            {% if current_filters and (current_filters.severity or current_filters.status or current_filters.validation_status or current_filters.project_id or current_filters.search) %}
+                            <button class="btn btn-outline-secondary" onclick="clearAllFilters()">
+                                <i class="bi bi-x-circle me-2"></i>Clear Filters
+                            </button>
+                            {% endif %}
+                            <a href="{{ url_for('projects.project_onboarding') }}" class="btn btn-primary">
+                                <i class="bi bi-plus-circle me-2"></i>Create Project
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // View toggle
+    const cardView = document.getElementById('cardView');
+    const tableView = document.getElementById('tableView');
+    const viewToggleCard = document.getElementById('viewToggleCard');
+    const viewToggleTable = document.getElementById('viewToggleTable');
+    
+    function setView(view) {
+        if (view === 'card') {
+            cardView.style.display = 'flex';
+            tableView.style.display = 'none';
+            viewToggleCard.classList.add('active');
+            viewToggleTable.classList.remove('active');
+            localStorage.setItem('findingsView', 'card');
+        } else {
+            cardView.style.display = 'none';
+            tableView.style.display = 'block';
+            viewToggleCard.classList.remove('active');
+            viewToggleTable.classList.add('active');
+            localStorage.setItem('findingsView', 'table');
+        }
+    }
+    
+    viewToggleCard.addEventListener('click', () => setView('card'));
+    viewToggleTable.addEventListener('click', () => setView('table'));
+    
+    // Restore view preference
+    const savedView = localStorage.getItem('findingsView') || 'card';
+    setView(savedView);
+    
+    // Filter elements
+    const severityFilter = document.getElementById('severityFilter');
+    const statusFilter = document.getElementById('statusFilter');
+    const validationStatusFilter = document.getElementById('validationStatusFilter');
+    const projectFilter = document.getElementById('projectFilter');
+    const searchInput = document.getElementById('searchInput');
+    const filePathFilter = document.getElementById('filePathFilter');
+    const dateFromFilter = document.getElementById('dateFromFilter');
+    const dateToFilter = document.getElementById('dateToFilter');
+    const confirmationCountFilter = document.getElementById('confirmationCountFilter');
+    const withConfirmationsFilter = document.getElementById('withConfirmationsFilter');
+    const withoutConfirmationsFilter = document.getElementById('withoutConfirmationsFilter');
+    const remoteAttackFilter = document.getElementById('remoteAttackFilter');
+    const notRemoteAttackFilter = document.getElementById('notRemoteAttackFilter');
+    const unanimousFilter = document.getElementById('unanimousFilter');
+    
+    // Debounce function for search
+    function debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    }
+    
+    // Build URL with all filters and reload
+    function reloadWithFilters() {
+        const params = new URLSearchParams();
+        
+        if (severityFilter.value) params.set('severity', severityFilter.value);
+        if (statusFilter.value) params.set('status', statusFilter.value);
+        if (validationStatusFilter.value) params.set('validation_status', validationStatusFilter.value);
+        if (projectFilter.value) params.set('project_id', projectFilter.value);
+        if (searchInput.value) params.set('search', searchInput.value);
+        if (filePathFilter && filePathFilter.value) params.set('file_path', filePathFilter.value);
+        if (dateFromFilter && dateFromFilter.value) params.set('date_from', dateFromFilter.value);
+        if (dateToFilter && dateToFilter.value) params.set('date_to', dateToFilter.value);
+        if (confirmationCountFilter && confirmationCountFilter.value) params.set('confirmation_count', confirmationCountFilter.value);
+        if (withConfirmationsFilter && withConfirmationsFilter.checked) params.set('with_confirmations', 'true');
+        if (withoutConfirmationsFilter && withoutConfirmationsFilter.checked) params.set('without_confirmations', 'true');
+        if (remoteAttackFilter && remoteAttackFilter.checked) params.set('remote_attack', 'true');
+        if (notRemoteAttackFilter && notRemoteAttackFilter.checked) params.set('not_remote_attack', 'true');
+        if (unanimousFilter && unanimousFilter.checked) params.set('unanimous_only', 'true');
+        
+        window.location.search = params.toString();
+    }
+    
+    // Debounced search
+    const debouncedReload = debounce(reloadWithFilters, 500);
+    
+    // Add event listeners to all filter elements
+    [severityFilter, statusFilter, validationStatusFilter, projectFilter].forEach(filter => {
+        if (filter) filter.addEventListener('change', reloadWithFilters);
+    });
+    
+    // Text inputs use debounced reload
+    [searchInput, filePathFilter].forEach(filter => {
+        if (filter) {
+            filter.addEventListener('input', debouncedReload);
+            filter.addEventListener('change', reloadWithFilters);
+        }
+    });
+    
+    // Date inputs reload immediately
+    [dateFromFilter, dateToFilter, confirmationCountFilter].forEach(filter => {
+        if (filter) filter.addEventListener('change', reloadWithFilters);
+    });
+    
+    // Checkboxes reload immediately
+    [withConfirmationsFilter, withoutConfirmationsFilter, remoteAttackFilter, notRemoteAttackFilter, unanimousFilter].forEach(filter => {
+        if (filter) filter.addEventListener('change', reloadWithFilters);
+    });
+});
+
+// Helper functions for quick filter actions
+function setValidationFilter(status) {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('validation_status') === status) {
+        params.delete('validation_status');
+    } else {
+        params.set('validation_status', status);
+    }
+    window.location.search = params.toString();
+}
+
+function setSeverityFilter(severity) {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('severity') === severity) {
+        params.delete('severity');
+    } else {
+        params.set('severity', severity);
+    }
+    window.location.search = params.toString();
+}
+
+function toggleRemoteAttack() {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('remote_attack') === 'true') {
+        params.delete('remote_attack');
+    } else {
+        params.set('remote_attack', 'true');
+    }
+    window.location.search = params.toString();
+}
+
+function clearAllFilters() {
+    window.location.href = window.location.pathname;
+}
+</script>
+{% endblock %}

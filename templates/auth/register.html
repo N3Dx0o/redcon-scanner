@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% if first_run %}Setup Admin Account{% else %}Register User{% endif %} — REDCON OFFENCE</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=2">
+    <style>
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background-image: radial-gradient(ellipse at 70% 5%, rgba(201,53,63,0.12) 0%, transparent 55%);
+        }
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(201,53,63,0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(201,53,63,0.03) 1px, transparent 1px);
+            background-size: 48px 48px;
+            pointer-events: none;
+            z-index: 0;
+        }
+        .auth-wrapper { width:100%; max-width:480px; padding:1rem; position:relative; z-index:1; }
+        .auth-logo { text-align:center; margin-bottom:2rem; }
+        .auth-logo .brand { font-family:'Space Grotesk',sans-serif; font-weight:900; font-size:2rem; letter-spacing:0.2em; color:#c9353f; }
+        .auth-logo .sub { font-size:0.7rem; letter-spacing:0.25em; color:#636c76; text-transform:uppercase; margin-top:0.25rem; }
+        .auth-card { background:#161b22; border:1px solid #2d333b; border-radius:16px; padding:2rem; box-shadow:0 24px 80px rgba(0,0,0,0.7); }
+        .auth-card h2 { font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:1.25rem; margin-bottom:0.25rem; }
+        .form-floating .form-control { background:#0d1117; border-color:#2d333b; color:#f0f3f6; border-radius:10px; }
+        .form-floating .form-control:focus { background:#161b22; border-color:#c9353f; box-shadow:0 0 0 3px rgba(201,53,63,0.18); color:#f0f3f6; }
+        .form-floating label { color:#9198a1; }
+        .btn-submit { background:#c9353f; border:none; color:#fff; font-weight:700; font-size:0.95rem; padding:0.75rem; border-radius:10px; width:100%; transition:all 0.25s ease; }
+        .btn-submit:hover { background:#e05561; box-shadow:0 4px 20px rgba(201,53,63,0.4); transform:translateY(-2px); color:#fff; }
+        .first-run-banner { background:rgba(201,53,63,0.08); border:1px solid rgba(201,53,63,0.3); border-radius:10px; padding:1rem; margin-bottom:1.5rem; font-size:0.875rem; color:#f0f3f6; }
+        .error-box { background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.35); border-radius:10px; color:#fca5a5; padding:0.875rem 1rem; font-size:0.875rem; margin-bottom:1.25rem; }
+        .form-check-input:checked { background-color:#c9353f; border-color:#c9353f; }
+        .strength-bar { height:4px; border-radius:99px; background:#2d333b; margin-top:0.5rem; overflow:hidden; }
+        .strength-fill { height:100%; border-radius:99px; transition:width 0.3s ease, background 0.3s ease; width:0%; }
+    </style>
+</head>
+<body>
+<div class="auth-wrapper slide-up">
+    <div class="auth-logo">
+        <div class="brand">REDCON<span style="color:#9198a1;font-weight:400;font-size:1.4rem;margin-left:0.3rem;">OFFENCE</span></div>
+        <div class="sub">Security Scanner — Setup</div>
+    </div>
+
+    <div class="auth-card">
+        <h2>
+            <i class="bi bi-{% if first_run %}person-fill-gear{% else %}person-plus{% endif %} me-2" style="color:#c9353f"></i>
+            {% if first_run %}Create Admin Account{% else %}Register New User{% endif %}
+        </h2>
+        <p style="color:#9198a1;font-size:0.875rem;margin-bottom:1.5rem;">
+            {% if first_run %}No users found — set up your admin account to get started.{% else %}Create a new dashboard user.{% endif %}
+        </p>
+
+        {% if first_run %}
+        <div class="first-run-banner">
+            <i class="bi bi-info-circle me-2" style="color:#c9353f"></i>
+            <strong>First-run setup.</strong> This account will have full admin access.
+        </div>
+        {% endif %}
+
+        {% if error %}
+        <div class="error-box"><i class="bi bi-exclamation-triangle-fill me-2"></i>{{ error }}</div>
+        {% endif %}
+
+        <form method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="form-floating mb-3">
+                <input type="text" class="form-control" id="username" name="username"
+                       placeholder="Username" required minlength="3" autofocus autocomplete="username">
+                <label for="username"><i class="bi bi-person me-1"></i>Username</label>
+            </div>
+
+            <div class="form-floating mb-3">
+                <input type="email" class="form-control" id="email" name="email"
+                       placeholder="Email" required autocomplete="email">
+                <label for="email"><i class="bi bi-envelope me-1"></i>Email Address</label>
+            </div>
+
+            <div class="form-floating mb-1">
+                <input type="password" class="form-control" id="password" name="password"
+                       placeholder="Password" required minlength="8" autocomplete="new-password"
+                       oninput="updateStrength(this.value)">
+                <label for="password"><i class="bi bi-key me-1"></i>Password</label>
+            </div>
+            <div class="strength-bar mb-3">
+                <div class="strength-fill" id="strengthFill"></div>
+            </div>
+
+            <div class="form-floating mb-3">
+                <input type="password" class="form-control" id="confirm_password" name="confirm_password"
+                       placeholder="Confirm password" required autocomplete="new-password">
+                <label for="confirm_password"><i class="bi bi-key-fill me-1"></i>Confirm Password</label>
+            </div>
+
+            {% if not first_run and current_user.is_admin %}
+            <div class="form-check mb-3">
+                <input class="form-check-input" type="checkbox" id="is_admin" name="is_admin">
+                <label class="form-check-label" for="is_admin" style="font-size:0.875rem;color:#9198a1;">
+                    Grant admin privileges
+                </label>
+            </div>
+            {% endif %}
+
+            <button type="submit" class="btn-submit">
+                <i class="bi bi-{% if first_run %}rocket-takeoff{% else %}person-check{% endif %} me-2"></i>
+                {% if first_run %}Create Admin & Get Started{% else %}Create User{% endif %}
+            </button>
+        </form>
+
+        {% if not first_run %}
+        <div style="text-align:center;margin-top:1.25rem;">
+            <a href="{{ url_for('auth.manage_users') }}" style="color:#9198a1;font-size:0.875rem;text-decoration:none;">
+                <i class="bi bi-arrow-left me-1"></i>Back to Users
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+function updateStrength(val) {
+    const fill = document.getElementById('strengthFill');
+    let score = 0;
+    if (val.length >= 8)  score += 25;
+    if (val.length >= 12) score += 25;
+    if (/[A-Z]/.test(val) && /[a-z]/.test(val)) score += 25;
+    if (/[0-9]/.test(val) || /[^a-zA-Z0-9]/.test(val)) score += 25;
+    fill.style.width = score + '%';
+    fill.style.background = score <= 25 ? '#ef4444' : score <= 50 ? '#f97316' : score <= 75 ? '#fbbf24' : '#3fb950';
+}
+</script>
+</body>
+</html>

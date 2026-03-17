@@ -1,0 +1,529 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard — REDCON OFFENCE{% endblock %}
+
+{% block content %}
+<div class="rdb-wrap">
+
+    <!-- ── Page Header ─────────────────────────────────────────── -->
+    <div class="rdb-header">
+        <div>
+            <h1 class="rdb-title">Security Dashboard</h1>
+            <p class="rdb-subtitle">Real-time overview across all security analysis projects</p>
+        </div>
+        <a href="{{ url_for('projects.project_onboarding') }}" class="btn btn-primary d-inline-flex align-items-center gap-2 px-4">
+            <i class="bi bi-plus-lg"></i>New Project
+        </a>
+    </div>
+
+    <!-- ── Hero Stat Cards ─────────────────────────────────────── -->
+    <div class="row g-3 mb-3">
+
+        <div class="col-lg-3 col-md-6">
+            <div class="rdb-hero-card rdb-hero-red">
+                <i class="rdb-hero-bg-icon bi bi-bug"></i>
+                <div class="rdb-hero-lbl">Total Findings</div>
+                <div class="rdb-hero-val">{{ findings_count }}</div>
+                <div class="rdb-hero-sub">Across {{ project_count }} project{{ 's' if project_count != 1 else '' }}</div>
+            </div>
+        </div>
+
+        <div class="col-lg-3 col-md-6">
+            <div class="rdb-hero-card rdb-hero-crimson">
+                <i class="rdb-hero-bg-icon bi bi-exclamation-octagon"></i>
+                <div class="rdb-hero-lbl">Critical</div>
+                <div class="rdb-hero-val">{{ total_critical }}</div>
+                <div class="rdb-hero-sub">{{ 'Immediate action required' if total_critical > 0 else 'No critical issues' }}</div>
+            </div>
+        </div>
+
+        <div class="col-lg-3 col-md-6">
+            <div class="rdb-hero-card rdb-hero-orange">
+                <i class="rdb-hero-bg-icon bi bi-exclamation-circle"></i>
+                <div class="rdb-hero-lbl">Open Issues</div>
+                <div class="rdb-hero-val">{{ total_open_issues }}</div>
+                <div class="rdb-hero-sub">{{ total_high }} high severity</div>
+            </div>
+        </div>
+
+        <div class="col-lg-3 col-md-6">
+            <div class="rdb-hero-card rdb-hero-green">
+                <i class="rdb-hero-bg-icon bi bi-shield-check"></i>
+                <div class="rdb-hero-lbl">Resolved</div>
+                <div class="rdb-hero-val">{{ total_resolved }}</div>
+                <div class="rdb-hero-sub">{% if findings_count > 0 %}{{ ((total_resolved / findings_count) * 100)|int }}% remediation rate{% else %}No findings yet{% endif %}</div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ── Secondary Metrics Band ──────────────────────────────── -->
+    <div class="rdb-band mb-4">
+        <div class="rdb-band-item">
+            <span class="rdb-band-val">{{ project_count }}</span>
+            <span class="rdb-band-lbl"><i class="bi bi-folder2-open"></i>Projects</span>
+        </div>
+        <div class="rdb-band-sep"></div>
+        <div class="rdb-band-item">
+            <span class="rdb-band-val" style="color:#f97316;">{{ total_high }}</span>
+            <span class="rdb-band-lbl"><i class="bi bi-exclamation-triangle"></i>High</span>
+        </div>
+        <div class="rdb-band-sep"></div>
+        <div class="rdb-band-item">
+            <span class="rdb-band-val" style="color:#60a5fa;">{{ active_projects }}</span>
+            <span class="rdb-band-lbl"><i class="bi bi-activity"></i>Active</span>
+        </div>
+        <div class="rdb-band-sep"></div>
+        <div class="rdb-band-item">
+            <span class="rdb-band-val" style="color:#a78bfa;">{{ scanning_projects }}</span>
+            <span class="rdb-band-lbl"><i class="bi bi-cpu"></i>Scanning</span>
+        </div>
+        <div class="rdb-band-sep"></div>
+        <div class="rdb-band-item">
+            <span class="rdb-band-val">${{ "%.2f"|format(total_cost) }}</span>
+            <span class="rdb-band-lbl"><i class="bi bi-currency-dollar"></i>AI Cost</span>
+        </div>
+    </div>
+
+    <!-- ── AI Intelligence Panel ───────────────────────────────── -->
+    {% if global_total_confirmations > 0 or global_pending > 0 %}
+    <div class="rdb-intel mb-4">
+        <div class="rdb-intel-header">
+            <i class="bi bi-robot"></i>
+            <span>AI Validation Intelligence</span>
+            <span class="rdb-intel-live">LIVE</span>
+        </div>
+        <div class="rdb-intel-body">
+
+            <div class="rdb-intel-item">
+                <div class="rdb-intel-icon rdb-intel-red"><i class="bi bi-bug-fill"></i></div>
+                <div class="rdb-intel-num" style="color:#ef4444;">{{ global_confirmed_bugs }}</div>
+                <div class="rdb-intel-lbl">Confirmed Bugs</div>
+                <div class="rdb-intel-desc">All models agree: real vulnerability</div>
+            </div>
+
+            <div class="rdb-intel-sep"></div>
+
+            <div class="rdb-intel-item">
+                <div class="rdb-intel-icon rdb-intel-green"><i class="bi bi-shield-check"></i></div>
+                <div class="rdb-intel-num" style="color:#34d399;">{{ global_false_positives }}</div>
+                <div class="rdb-intel-lbl">False Positives</div>
+                <div class="rdb-intel-desc">Not exploitable by consensus</div>
+            </div>
+
+            <div class="rdb-intel-sep"></div>
+
+            <div class="rdb-intel-item">
+                <div class="rdb-intel-icon rdb-intel-amber"><i class="bi bi-exclamation-triangle"></i></div>
+                <div class="rdb-intel-num" style="color:#fbbf24;">{{ global_conflicting }}</div>
+                <div class="rdb-intel-lbl">Conflicting</div>
+                <div class="rdb-intel-desc">Models disagree — needs review</div>
+            </div>
+
+            <div class="rdb-intel-sep"></div>
+
+            <div class="rdb-intel-item">
+                <div class="rdb-intel-icon rdb-intel-dim"><i class="bi bi-hourglass-split"></i></div>
+                <div class="rdb-intel-num">{{ global_pending }}</div>
+                <div class="rdb-intel-lbl">Pending</div>
+                <div class="rdb-intel-desc">Awaiting AI validation</div>
+            </div>
+
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ── Charts ──────────────────────────────────────────────── -->
+    {% if findings_count > 0 %}
+    <div class="row g-3 mb-4">
+        <div class="col-lg-5">
+            <div class="rdb-chart-card">
+                <div class="rdb-chart-hdr">
+                    <i class="bi bi-pie-chart-fill" style="color:var(--redcon-primary);"></i>
+                    <span>Findings by Status</span>
+                </div>
+                <div class="rdb-chart-body">
+                    <canvas id="statusChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-7">
+            <div class="rdb-chart-card">
+                <div class="rdb-chart-hdr">
+                    <i class="bi bi-bar-chart-fill" style="color:var(--redcon-primary);"></i>
+                    <span>Findings by Severity</span>
+                </div>
+                <div class="rdb-chart-body">
+                    <canvas id="severityChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ── Projects ────────────────────────────────────────────── -->
+    {% if projects %}
+    <div class="rdb-section-hdr mb-3">
+        <i class="bi bi-folder2-open"></i>
+        <span>Projects</span>
+        <span class="rdb-section-count">{{ project_count }}</span>
+    </div>
+
+    <div class="row g-3">
+        {% for stat in project_stats %}
+        {% set project = stat.project %}
+        {% set proj_accent = '#ef4444' if stat.critical_count > 0 else ('#f97316' if stat.high_count > 0 else ('#fbbf24' if stat.medium_count > 0 else '#34d399')) %}
+
+        <div class="col-xl-4 col-lg-6">
+            <div class="rdb-proj" style="--proj-accent:{{ proj_accent }};">
+
+                <!-- Header -->
+                <div class="rdb-proj-hdr">
+                    <div class="rdb-proj-title-row">
+                        <span class="rdb-proj-dot" style="background:{% if project.status.value == 'scanning' %}#a78bfa{% elif project.status.value == 'active' %}#34d399{% else %}#636c76{% endif %};"></span>
+                        <h6 class="rdb-proj-name">{{ project.name }}</h6>
+                    </div>
+                    <span class="badge-status badge-{{ project.status.value }}">
+                        {% if project.status.value == 'scanning' %}<span class="status-dot scanning"></span>{% endif %}
+                        {{ project.status.value.title() }}
+                    </span>
+                </div>
+
+                <!-- Severity Grid -->
+                <div class="rdb-sev-grid">
+                    <div class="rdb-sev-cell">
+                        <span class="rdb-sev-val" style="color:#ef4444;">{{ stat.critical_count }}</span>
+                        <span class="rdb-sev-lbl">Critical</span>
+                    </div>
+                    <div class="rdb-sev-cell">
+                        <span class="rdb-sev-val" style="color:#f97316;">{{ stat.high_count }}</span>
+                        <span class="rdb-sev-lbl">High</span>
+                    </div>
+                    <div class="rdb-sev-cell">
+                        <span class="rdb-sev-val" style="color:#fbbf24;">{{ stat.medium_count }}</span>
+                        <span class="rdb-sev-lbl">Medium</span>
+                    </div>
+                    <div class="rdb-sev-cell">
+                        <span class="rdb-sev-val" style="color:#9198a1;">{{ stat.low_count + stat.info_count }}</span>
+                        <span class="rdb-sev-lbl">Low / Info</span>
+                    </div>
+                </div>
+
+                <!-- Progress Bar -->
+                {% if stat.total_findings > 0 %}
+                <div class="rdb-prog-wrap">
+                    <div class="rdb-prog-labels">
+                        <span>{{ stat.total_findings }} findings</span>
+                        <span style="color:#34d399;">{{ ((stat.resolved_count / stat.total_findings) * 100)|int }}% resolved</span>
+                    </div>
+                    <div class="rdb-prog-track">
+                        <div class="rdb-prog-seg" style="background:#c9353f;width:{{ (stat.open_count / stat.total_findings * 100)|int }}%;"></div>
+                        <div class="rdb-prog-seg" style="background:#f97316;width:{{ (stat.in_progress_count / stat.total_findings * 100)|int }}%;"></div>
+                        <div class="rdb-prog-seg" style="background:#34d399;width:{{ (stat.resolved_count / stat.total_findings * 100)|int }}%;"></div>
+                    </div>
+                    <div class="rdb-prog-legend">
+                        <span><span style="color:#c9353f;">●</span> {{ stat.open_count }} open</span>
+                        <span><span style="color:#f97316;">●</span> {{ stat.in_progress_count }} in progress</span>
+                        <span><span style="color:#34d399;">●</span> {{ stat.resolved_count }} resolved</span>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- AI Chips -->
+                {% if stat.total_findings > 0 and (stat.confirmed_bugs + stat.confirmed_false_positives + stat.conflicting) > 0 %}
+                <div class="rdb-ai-row">
+                    <span class="rdb-chip rdb-chip-red"><i class="bi bi-bug-fill"></i>{{ stat.confirmed_bugs }} real</span>
+                    <span class="rdb-chip rdb-chip-green"><i class="bi bi-shield-check"></i>{{ stat.confirmed_false_positives }} FP</span>
+                    <span class="rdb-chip rdb-chip-amber"><i class="bi bi-question-circle"></i>{{ stat.conflicting }} conflict</span>
+                    {% if stat.pending_validation > 0 %}
+                    <span class="rdb-chip"><i class="bi bi-hourglass-split"></i>{{ stat.pending_validation }} pending</span>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                <!-- Meta -->
+                <div class="rdb-proj-meta">
+                    <span><i class="bi bi-currency-dollar"></i>${{ "%.2f"|format(project.cost or 0) }}</span>
+                    <span><i class="bi bi-calendar3"></i>{{ project.created_at.strftime('%b %d, %Y') }}</span>
+                    {% if project.last_scanned_at %}
+                    <span><i class="bi bi-clock"></i>{{ project.last_scanned_at.strftime('%b %d') }}</span>
+                    {% endif %}
+                </div>
+
+                <!-- Actions -->
+                <div class="rdb-proj-actions">
+                    <a href="{{ url_for('projects.view_project', project_id=project.id) }}" class="btn btn-sm btn-outline-secondary flex-fill">
+                        <i class="bi bi-eye me-1"></i>View
+                    </a>
+                    <button type="button" class="btn btn-sm btn-primary flex-fill"
+                        data-bs-toggle="modal" data-bs-target="#startScanModal"
+                        data-project-id="{{ project.id }}" data-project-name="{{ project.name }}">
+                        <i class="bi bi-play-fill me-1"></i>Scan
+                    </button>
+                    <a href="{{ url_for('projects.edit_project', project_id=project.id) }}" class="btn btn-sm btn-outline-secondary">
+                        <i class="bi bi-pencil"></i>
+                    </a>
+                    <button type="button" class="btn btn-sm btn-outline-danger"
+                        data-bs-toggle="modal" data-bs-target="#deleteModal{{ project.id }}">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </div>
+
+            </div>
+
+            <!-- Delete Modal -->
+            <div class="modal fade" id="deleteModal{{ project.id }}" tabindex="-1">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title"><i class="bi bi-exclamation-triangle text-danger me-2"></i>Delete Project</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <p>Are you sure you want to delete <strong>"{{ project.name }}"</strong>?</p>
+                            <p class="text-muted mb-0" style="font-size:0.875rem;">This action cannot be undone and will remove all associated findings.</p>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <form method="POST" action="{{ url_for('projects.delete_project', project_id=project.id) }}" class="d-inline">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn btn-danger"><i class="bi bi-trash me-1"></i>Delete</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% else %}
+    <!-- Empty State -->
+    <div class="rdb-empty">
+        <div class="rdb-empty-icon"><i class="bi bi-folder-plus"></i></div>
+        <h5 class="rdb-empty-title">No Projects Yet</h5>
+        <p class="rdb-empty-desc">Create your first project to start analyzing code for security vulnerabilities.</p>
+        <a href="{{ url_for('projects.project_onboarding') }}" class="btn btn-primary">
+            <i class="bi bi-plus-lg me-2"></i>Create First Project
+        </a>
+    </div>
+    {% endif %}
+
+</div>
+
+<!-- ── Start Scan Modal ────────────────────────────────────── -->
+<div class="modal fade" id="startScanModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-play-circle me-2" style="color:var(--redcon-primary);"></i>Start Security Scan</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Project</label>
+                    <input type="text" class="form-control" id="scanProjectName" readonly>
+                    <input type="hidden" id="scanProjectId">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">AI Model</label>
+                    <select class="form-select" id="scanModelSelect" required>
+                        <option value="">Loading models…</option>
+                    </select>
+                </div>
+                <div id="scanStatus" class="alert d-none"></div>
+                <div id="scanOutput" class="d-none">
+                    <label class="form-label">Output</label>
+                    <pre class="rounded p-3" style="background:#0d1117;border:1px solid #2d333b;font-size:0.8rem;max-height:200px;overflow-y:auto;color:#f0f3f6;" id="scanOutputText"></pre>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="startScanBtn">
+                    <i class="bi bi-play-fill me-1"></i>Start Scan
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+
+    // ── Charts ──────────────────────────────────────────────────
+    {% if findings_count > 0 %}
+    Chart.defaults.color       = '#9198a1';
+    Chart.defaults.borderColor = '#2d333b';
+
+    const statusCtx = document.getElementById('statusChart');
+    if (statusCtx) {
+        new Chart(statusCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Open', 'In Progress', 'Resolved', 'False Positive', 'Ignored'],
+                datasets: [{
+                    data: [
+                        {{ global_status_counts.get('open', 0) }},
+                        {{ global_status_counts.get('in_progress', 0) }},
+                        {{ global_status_counts.get('resolved', 0) }},
+                        {{ global_status_counts.get('false_positive', 0) }},
+                        {{ global_status_counts.get('ignored', 0) }}
+                    ],
+                    backgroundColor: [
+                        'rgba(201,53,63,0.85)',
+                        'rgba(249,115,22,0.85)',
+                        'rgba(52,211,153,0.85)',
+                        'rgba(96,165,250,0.7)',
+                        'rgba(45,51,59,0.9)'
+                    ],
+                    borderColor: ['#c9353f','#f97316','#34d399','#60a5fa','#2d333b'],
+                    borderWidth: 2,
+                    hoverOffset: 8
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                cutout: '70%',
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { padding: 14, font: { size: 11 }, boxWidth: 8, usePointStyle: true, pointStyle: 'circle' }
+                    },
+                    tooltip: { callbacks: { label: function(c) {
+                        const total = c.dataset.data.reduce((a,b)=>a+b,0);
+                        return ` ${c.label}: ${c.parsed} (${total>0?((c.parsed/total)*100).toFixed(0):0}%)`;
+                    }}}
+                }
+            }
+        });
+    }
+
+    const sevCtx = document.getElementById('severityChart');
+    if (sevCtx) {
+        new Chart(sevCtx, {
+            type: 'bar',
+            data: {
+                labels: ['Critical','High','Medium','Low','Info'],
+                datasets: [{
+                    label: 'Findings',
+                    data: [
+                        {{ global_severity_counts.get('critical', 0) }},
+                        {{ global_severity_counts.get('high', 0) }},
+                        {{ global_severity_counts.get('medium', 0) }},
+                        {{ global_severity_counts.get('low', 0) }},
+                        {{ global_severity_counts.get('info', 0) }}
+                    ],
+                    backgroundColor: [
+                        'rgba(201,53,63,0.8)',
+                        'rgba(249,115,22,0.8)',
+                        'rgba(251,191,36,0.8)',
+                        'rgba(145,152,161,0.5)',
+                        'rgba(45,51,59,0.85)'
+                    ],
+                    borderColor: ['#c9353f','#f97316','#fbbf24','#9198a1','#3d444d'],
+                    borderWidth: 2,
+                    borderRadius: 8,
+                    borderSkipped: false
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { stepSize: 1, font: { size: 11 } },
+                        grid: { color: 'rgba(255,255,255,0.04)' }
+                    },
+                    x: { ticks: { font: { size: 11 } }, grid: { display: false } }
+                }
+            }
+        });
+    }
+    {% endif %}
+
+    // ── Scan Modal ───────────────────────────────────────────────
+    const scanModal  = document.getElementById('startScanModal');
+    const modelSel   = document.getElementById('scanModelSelect');
+    const projIdIn   = document.getElementById('scanProjectId');
+    const projNameIn = document.getElementById('scanProjectName');
+    const startBtn   = document.getElementById('startScanBtn');
+    const statusBox  = document.getElementById('scanStatus');
+    const outputBox  = document.getElementById('scanOutput');
+    const outputPre  = document.getElementById('scanOutputText');
+
+    if (scanModal) {
+        scanModal.addEventListener('show.bs.modal', function (e) {
+            const btn = e.relatedTarget;
+            projIdIn.value   = btn.getAttribute('data-project-id');
+            projNameIn.value = btn.getAttribute('data-project-name');
+            loadModels();
+            statusBox.classList.add('d-none');
+            outputBox.classList.add('d-none');
+            startBtn.disabled = false;
+            startBtn.innerHTML = '<i class="bi bi-play-fill me-1"></i>Start Scan';
+        });
+
+        function loadModels() {
+            modelSel.innerHTML = '<option value="">Loading…</option>';
+            fetch('/api/ai-models')
+                .then(r => r.json())
+                .then(d => {
+                    modelSel.innerHTML = '<option value="">Select an AI Model</option>';
+                    d.models.forEach(m => {
+                        const o = document.createElement('option');
+                        o.value = m.id;
+                        o.textContent = `${m.vendor}/${m.model_name} (${m.api_key_suffix})`;
+                        modelSel.appendChild(o);
+                    });
+                })
+                .catch(() => { modelSel.innerHTML = '<option value="">Error loading models</option>'; });
+        }
+
+        startBtn.addEventListener('click', function () {
+            const modelId = modelSel.value;
+            const projId  = projIdIn.value;
+            if (!modelId) { showStatus('warning', 'Please select an AI model.'); return; }
+            if (!projId)  { showStatus('danger',  'Project ID missing.'); return; }
+
+            startBtn.disabled = true;
+            startBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Starting…';
+            statusBox.classList.add('d-none');
+            outputBox.classList.add('d-none');
+
+            fetch(`/projects/${projId}/start-scan`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ model_id: parseInt(modelId) })
+            })
+            .then(r => r.json())
+            .then(d => {
+                if (d.success) {
+                    let msg = d.already_running ? 'Scan already running.' : 'Scan started successfully.';
+                    if (d.pid)      msg += `\nProcess ID: ${d.pid}`;
+                    if (d.log_file) msg += `\nLog: ${d.log_file}`;
+                    showStatus(d.already_running ? 'info' : 'success', msg);
+                    if (d.output) { outputPre.textContent = d.output; outputBox.classList.remove('d-none'); }
+                } else {
+                    showStatus('danger', d.error || 'Failed to start scan.');
+                }
+                startBtn.disabled = false;
+                startBtn.innerHTML = '<i class="bi bi-play-fill me-1"></i>Start Scan';
+            })
+            .catch(err => {
+                showStatus('danger', 'Error: ' + err.message);
+                startBtn.disabled = false;
+                startBtn.innerHTML = '<i class="bi bi-play-fill me-1"></i>Start Scan';
+            });
+        });
+
+        function showStatus(type, msg) {
+            statusBox.className = `alert alert-${type}`;
+            statusBox.style.whiteSpace = 'pre-line';
+            statusBox.textContent = msg;
+            statusBox.classList.remove('d-none');
+        }
+    }
+});
+</script>
+{% endblock %}

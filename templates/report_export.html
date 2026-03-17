@@ -1,0 +1,1124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Security Findings Report</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+        
+        @page {
+            size: A4;
+            margin: 2cm;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+            color: #1a1a1a;
+            line-height: 1.8;
+            font-size: 10.5pt;
+            font-weight: 400;
+            letter-spacing: -0.01em;
+            background: #ffffff;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            padding: 30px;
+            margin: -2cm -2cm 30px -2cm;
+            border-bottom: 4px solid #0ea5e9;
+        }
+        
+        h1 {
+            color: #ffffff;
+            font-size: 32pt;
+            margin-bottom: 12px;
+            font-weight: 800;
+            letter-spacing: -0.04em;
+            text-transform: uppercase;
+        }
+        
+        h2 {
+            color: #0f172a;
+            font-size: 22pt;
+            margin-top: 40px;
+            margin-bottom: 20px;
+            border-bottom: 3px solid #0ea5e9;
+            padding-bottom: 12px;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            text-transform: uppercase;
+            page-break-after: avoid;
+        }
+        
+        h3 {
+            color: #1e293b;
+            font-size: 16pt;
+            margin-top: 25px;
+            margin-bottom: 14px;
+            font-weight: 700;
+            letter-spacing: -0.01em;
+            page-break-after: avoid;
+        }
+        
+        .meta {
+            font-size: 9.5pt;
+            color: #94a3b8;
+            margin-top: 8px;
+            font-weight: 400;
+            line-height: 1.6;
+        }
+        
+        .executive-summary {
+            background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
+            border: 2px solid #0ea5e9;
+            border-left: 6px solid #0ea5e9;
+            padding: 30px;
+            margin: 40px 0;
+            page-break-inside: avoid;
+            page-break-before: auto;
+            border-radius: 8px;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin: 24px 0;
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            border: 2px solid #334155;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            transition: all 0.2s;
+        }
+        
+        .stat-value {
+            font-size: 36pt;
+            font-weight: 800;
+            color: #0ea5e9;
+            margin-bottom: 6px;
+            letter-spacing: -0.03em;
+        }
+        
+        .stat-label {
+            font-size: 8.5pt;
+            color: #cbd5e1;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            font-weight: 600;
+        }
+        
+        .breakdown-section {
+            margin: 35px 0;
+            page-break-inside: avoid;
+            page-break-after: avoid;
+        }
+        
+        .breakdown-title {
+            font-size: 14pt;
+            font-weight: 700;
+            margin-bottom: 18px;
+            color: #0f172a;
+            letter-spacing: -0.01em;
+            text-transform: uppercase;
+        }
+        
+        .breakdown-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 12px;
+        }
+        
+        .breakdown-card {
+            background: #f8fafc;
+            border: 2px solid #e5e7eb;
+            border-radius: 10px;
+            padding: 16px;
+            text-align: center;
+        }
+        
+        .breakdown-value {
+            font-size: 28pt;
+            font-weight: 800;
+            margin-bottom: 6px;
+            letter-spacing: -0.02em;
+        }
+        
+        .breakdown-label {
+            font-size: 8.5pt;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            font-weight: 600;
+        }
+        
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 26px 0;
+            font-size: 9.5pt;
+            page-break-inside: auto;
+        }
+        
+        .table thead {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: white;
+        }
+        
+        .table th {
+            padding: 14px 12px;
+            text-align: left;
+            font-weight: 700;
+            border: none;
+            font-size: 8.5pt;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            border-right: 1px solid #334155;
+        }
+        
+        .table th:last-child {
+            border-right: none;
+        }
+        
+        .table td {
+            padding: 11px 12px;
+            border-bottom: 1px solid #e5e7eb;
+            vertical-align: middle;
+            font-size: 9.5pt;
+        }
+        
+        .table tbody tr {
+            page-break-inside: avoid;
+        }
+        
+        .table tbody tr:nth-child(even) {
+            background: #f8fafc;
+        }
+        
+        .table tbody tr:hover {
+            background: #f1f5f9;
+        }
+        
+        .table-link {
+            color: #3498db;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        
+        .table-link:hover {
+            text-decoration: underline;
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 6px;
+            font-size: 8pt;
+            font-weight: 700;
+            color: white;
+            text-transform: uppercase;
+            white-space: nowrap;
+            letter-spacing: 0.08em;
+        }
+        
+        .sev-critical { background: #dc2626; border: 2px solid #b91c1c; }
+        .sev-high { background: #ea580c; border: 2px solid #c2410c; }
+        .sev-medium { background: #f59e0b; border: 2px solid #d97706; }
+        .sev-low { background: #10b981; border: 2px solid #059669; }
+        .sev-info { background: #0ea5e9; border: 2px solid #0284c7; }
+        
+        .status {
+            padding: 5px 12px;
+            border-radius: 6px;
+            font-size: 8pt;
+            display: inline-block;
+            white-space: nowrap;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+        }
+        
+        .status-open { background: #dc2626; color: white; border: 2px solid #b91c1c; }
+        .status-in_progress { background: #f59e0b; color: white; border: 2px solid #d97706; }
+        .status-resolved { background: #10b981; color: white; border: 2px solid #059669; }
+        .status-false_positive { background: #6b7280; color: white; border: 2px solid #4b5563; }
+        .status-ignored { background: #64748b; color: white; border: 2px solid #475569; }
+        
+        .finding-detail {
+            margin: 45px 0;
+            padding: 0;
+            border: 2px solid #0ea5e9;
+            border-radius: 12px;
+            page-break-inside: avoid;
+            page-break-after: auto;
+            background: white;
+            overflow: hidden;
+        }
+        
+        .finding-header {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            padding: 20px 24px;
+            margin-bottom: 0;
+            border-bottom: 3px solid #0ea5e9;
+        }
+        
+        .finding-title {
+            font-size: 18pt;
+            font-weight: 700;
+            color: #ffffff;
+            margin-bottom: 12px;
+            letter-spacing: -0.02em;
+            line-height: 1.3;
+        }
+        
+        .finding-meta {
+            display: flex;
+            gap: 18px;
+            flex-wrap: wrap;
+            font-size: 9pt;
+            color: #94a3b8;
+            font-weight: 500;
+        }
+        
+        .finding-section {
+            margin: 20px 0;
+            padding: 0 26px;
+            page-break-inside: avoid;
+        }
+        
+        .finding-section:last-child {
+            padding-bottom: 26px;
+        }
+        
+        .finding-section-title {
+            font-size: 12.5pt;
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 14px;
+            border-left: 4px solid #0ea5e9;
+            padding-left: 14px;
+            letter-spacing: 0.02em;
+            text-transform: uppercase;
+            background: linear-gradient(90deg, #f1f5f9 0%, transparent 100%);
+            padding-top: 10px;
+            padding-bottom: 10px;
+            margin-left: -26px;
+            padding-left: 40px;
+            page-break-after: avoid;
+        }
+        
+        .finding-content {
+            background: #f8fafc;
+            padding: 18px;
+            border-radius: 6px;
+            font-size: 10pt;
+            line-height: 1.9;
+            border: 1px solid #e5e7eb;
+        }
+        
+        .confirmation {
+            margin: 20px 0;
+            padding: 0;
+            background: white;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            overflow: hidden;
+            page-break-inside: avoid;
+        }
+        
+        .confirmation-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            padding: 12px 16px;
+            border-bottom: 2px solid #0ea5e9;
+        }
+        
+        .confirmation-model {
+            font-weight: 700;
+            color: #ffffff;
+            font-size: 10pt;
+            letter-spacing: -0.01em;
+        }
+        
+        .confirmation-badge {
+            padding: 6px 14px;
+            border-radius: 6px;
+            font-size: 8pt;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+        
+        .confirmation-confirmed {
+            background: #10b981;
+            color: white;
+            border: 2px solid #059669;
+        }
+        
+        .confirmation-false-positive {
+            background: #dc2626;
+            color: white;
+            border: 2px solid #b91c1c;
+        }
+        
+        .confirmation-detail {
+            margin: 14px 0;
+            font-size: 9pt;
+            padding: 0 16px;
+        }
+        
+        .confirmation-detail:last-child {
+            padding-bottom: 16px;
+        }
+        
+        .confirmation-label {
+            font-weight: 700;
+            color: #0f172a;
+            margin-right: 6px;
+            font-size: 9.5pt;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            display: block;
+            margin-bottom: 6px;
+        }
+        
+        code {
+            background: #f1f5f9;
+            padding: 3px 7px;
+            border-radius: 4px;
+            font-family: 'SF Mono', 'Monaco', 'Cascadia Code', 'Roboto Mono', 'Courier New', monospace;
+            font-size: 8.5pt;
+            color: #dc2626;
+            font-weight: 500;
+            border: 1px solid #e5e7eb;
+        }
+        
+        pre {
+            background: #0f172a;
+            color: #e2e8f0;
+            padding: 14px;
+            border-radius: 6px;
+            margin: 12px 0;
+            border: 1px solid #1e293b;
+            line-height: 1.6;
+            word-wrap: break-word;
+            white-space: pre-wrap;
+        }
+        
+        pre code {
+            background: none;
+            color: #e2e8f0;
+            padding: 0;
+            font-size: 8pt;
+            line-height: 1.6;
+            border: none;
+        }
+        
+        .finding-content h1,
+        .finding-content h2,
+        .finding-content h3,
+        .finding-content h4,
+        .finding-content h5,
+        .finding-content h6 {
+            color: #0f172a;
+            margin-top: 14px;
+            margin-bottom: 9px;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+        
+        .finding-content h1 { font-size: 14pt; }
+        .finding-content h2 { font-size: 13pt; }
+        .finding-content h3 { font-size: 12pt; }
+        .finding-content h4 { font-size: 11pt; }
+        .finding-content h5 { font-size: 10pt; }
+        .finding-content h6 { font-size: 10pt; }
+        
+        .finding-content ul,
+        .finding-content ol {
+            margin: 8px 0;
+            padding-left: 25px;
+        }
+        
+        .finding-content li {
+            margin: 4px 0;
+            line-height: 1.6;
+        }
+        
+        .finding-content p {
+            margin: 8px 0;
+            line-height: 1.6;
+        }
+        
+        .finding-content blockquote {
+            border-left: 3px solid #0ea5e9;
+            margin: 12px 0;
+            padding: 10px 14px;
+            background: #f1f5f9;
+            font-style: italic;
+            color: #475569;
+            border-radius: 4px;
+        }
+        
+        .finding-content a {
+            color: #0ea5e9;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        
+        .finding-content a:hover {
+            text-decoration: underline;
+        }
+        
+        .finding-content table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0;
+            font-size: 9pt;
+        }
+        
+        .finding-content table th,
+        .finding-content table td {
+            border: 1px solid #dee2e6;
+            padding: 6px 8px;
+            text-align: left;
+        }
+        
+        .finding-content table th {
+            background: #f8f9fa;
+            font-weight: 600;
+        }
+        
+        .finding-content strong {
+            font-weight: 600;
+            color: #0f172a;
+        }
+        
+        .finding-content em {
+            font-style: italic;
+        }
+        
+        .finding-content hr {
+            border: none;
+            border-top: 1px solid #dee2e6;
+            margin: 15px 0;
+        }
+        
+        .confirmation-detail-content {
+            background: #f8fafc;
+            padding: 14px;
+            border-radius: 6px;
+            border: 1px solid #e5e7eb;
+            margin-top: 8px;
+            font-size: 9.5pt;
+            line-height: 1.8;
+        }
+        
+        .confirmation-detail-content h1,
+        .confirmation-detail-content h2,
+        .confirmation-detail-content h3,
+        .confirmation-detail-content h4,
+        .confirmation-detail-content h5,
+        .confirmation-detail-content h6 {
+            color: #2c3e50;
+            margin-top: 10px;
+            margin-bottom: 6px;
+            font-weight: 600;
+        }
+        
+        .confirmation-detail-content h1 { font-size: 12pt; }
+        .confirmation-detail-content h2 { font-size: 11pt; }
+        .confirmation-detail-content h3 { font-size: 10pt; }
+        .confirmation-detail-content h4 { font-size: 10pt; }
+        .confirmation-detail-content h5 { font-size: 9pt; }
+        .confirmation-detail-content h6 { font-size: 9pt; }
+        
+        .confirmation-detail-content ul,
+        .confirmation-detail-content ol {
+            margin: 6px 0;
+            padding-left: 20px;
+        }
+        
+        .confirmation-detail-content li {
+            margin: 3px 0;
+            line-height: 1.5;
+        }
+        
+        .confirmation-detail-content p {
+            margin: 6px 0;
+            line-height: 1.5;
+        }
+        
+        .confirmation-detail-content pre {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 8px 0;
+            font-size: 8pt;
+            word-wrap: break-word;
+            white-space: pre-wrap;
+        }
+        
+        .confirmation-detail-content pre code {
+            background: none;
+            color: #f8f8f2;
+            padding: 0;
+        }
+        
+        .confirmation-detail-content code {
+            background: #e9ecef;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 8.5pt;
+            color: #c7254e;
+        }
+        
+        .confirmation-detail-content blockquote {
+            border-left: 3px solid #3498db;
+            margin: 8px 0;
+            padding: 6px 10px;
+            background: #f8f9fa;
+            font-style: italic;
+            color: #555;
+        }
+        
+        .confirmation-detail-content strong {
+            font-weight: 600;
+            color: #0f172a;
+        }
+        
+        .breakdown-critical .breakdown-value { color: #dc2626; }
+        .breakdown-high .breakdown-value { color: #ea580c; }
+        .breakdown-medium .breakdown-value { color: #f59e0b; }
+        .breakdown-low .breakdown-value { color: #10b981; }
+        .breakdown-info .breakdown-value { color: #0ea5e9; }
+        
+        .confirmation-summary-table {
+            width: 100%;
+            margin: 20px 0;
+            border-collapse: collapse;
+            font-size: 9.5pt;
+            background: white;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+        
+        .confirmation-summary-table thead {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: white;
+        }
+        
+        .confirmation-summary-table th {
+            padding: 12px 14px;
+            text-align: left;
+            font-weight: 700;
+            font-size: 9pt;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            border-right: 1px solid #334155;
+        }
+        
+        .confirmation-summary-table th:last-child {
+            border-right: none;
+        }
+        
+        .confirmation-summary-table td {
+            padding: 10px 14px;
+            border-bottom: 1px solid #e5e7eb;
+            vertical-align: middle;
+            font-size: 9.5pt;
+        }
+        
+        .confirmation-summary-table tbody tr:nth-child(even) {
+            background: #f8fafc;
+        }
+        
+        .confirmation-summary-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .confirmation-summary-section {
+            margin: 22px 0;
+            padding: 0 26px;
+            page-break-inside: avoid;
+        }
+        
+        .footer {
+            margin-top: 50px;
+            padding: 24px 0;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            margin-left: -2cm;
+            margin-right: -2cm;
+            margin-bottom: -2cm;
+            font-size: 9pt;
+            color: #cbd5e1;
+            text-align: center;
+            font-weight: 400;
+            border-top: 3px solid #0ea5e9;
+        }
+        
+        .footer p {
+            margin: 6px 0;
+        }
+        
+        .insights-list {
+            list-style: none;
+            padding-left: 0;
+            background: white;
+            padding: 18px 20px;
+            border-radius: 6px;
+            border: 1px solid #e5e7eb;
+            font-size: 10pt;
+            line-height: 1.8;
+        }
+        
+        .insights-list li {
+            padding: 11px 0;
+            padding-left: 26px;
+            position: relative;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        
+        .insights-list li:last-child {
+            border-bottom: none;
+        }
+        
+        .insights-list li:before {
+            content: "▸";
+            position: absolute;
+            left: 0;
+            color: #0ea5e9;
+            font-weight: 700;
+            font-size: 12pt;
+        }
+        
+        .no-findings {
+            text-align: center;
+            padding: 40px;
+            color: #7f8c8d;
+            font-size: 14pt;
+        }
+        
+        .file-path {
+            font-size: 8pt;
+            word-break: break-all;
+        }
+        
+        .findings-list-container {
+            margin: 35px auto;
+            max-width: 88%;
+            text-align: left;
+            page-break-before: always;
+            page-break-after: always;
+        }
+        
+        .findings-list {
+            list-style: none;
+            padding-left: 0;
+            margin: 0;
+            border: 2px solid #0ea5e9;
+            border-radius: 10px;
+            background: #f8fafc;
+            padding: 20px;
+        }
+        
+        .findings-list .project-item {
+            margin: 20px 0 10px 0;
+            font-size: 9.5pt;
+            font-weight: 700;
+            color: #0f172a;
+            padding: 10px 12px;
+            border-bottom: 2px solid #0ea5e9;
+            padding-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            background: linear-gradient(90deg, #e0f2fe 0%, transparent 100%);
+            border-radius: 4px;
+        }
+        
+        .findings-list .project-item:first-child {
+            margin-top: 0;
+        }
+        
+        .findings-list .finding-item {
+            margin: 6px 0;
+            margin-left: 20px;
+            font-size: 9pt;
+            padding: 5px 0;
+            line-height: 1.6;
+            border-left: 2px solid transparent;
+            padding-left: 12px;
+            transition: border-color 0.2s;
+        }
+        
+        .findings-list .finding-item:hover {
+            border-left-color: #3498db;
+        }
+        
+        .finding-item-link {
+            color: #2c3e50;
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 9pt;
+            display: inline-block;
+            margin-right: 8px;
+        }
+        
+        .finding-item-link:hover {
+            color: #3498db;
+        }
+        
+        .finding-meta-inline {
+            display: inline-block;
+            margin-left: 0;
+            font-size: 8pt;
+            color: #7f8c8d;
+            vertical-align: middle;
+        }
+        
+        .finding-meta-inline .badge {
+            font-size: 7.5pt;
+            padding: 2px 6px;
+            margin: 0 3px;
+            vertical-align: middle;
+        }
+        
+        .finding-meta-inline .status {
+            font-size: 7.5pt;
+            padding: 2px 6px;
+            margin: 0 3px;
+            vertical-align: middle;
+        }
+        
+        .finding-meta-separator {
+            color: #bdc3c7;
+            margin: 0 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Security Findings Report</h1>
+        <div class="meta">
+            Generated at: {{ generated_at.strftime('%Y-%m-%d %H:%M:%S UTC') }}<br>
+            {% set f = filters %}
+            Filters: Severity={{ f.severity or 'Any' }}, Status={{ f.status or 'Any' }}, 
+            Project={{ f.project_id or 'Any' }}, Search={{ f.search or 'None' }}
+        </div>
+    </div>
+
+    {% if findings %}
+    <!-- Executive Summary -->
+    <div class="executive-summary">
+        <h2>Executive Summary</h2>
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value">{{ statistics.total_findings }}</div>
+                <div class="stat-label">Total Findings</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">{{ statistics.project_count }}</div>
+                <div class="stat-label">Projects</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">{{ statistics.confirmed_count }}</div>
+                <div class="stat-label">Confirmed</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">{{ statistics.false_positive_count }}</div>
+                <div class="stat-label">False Positives</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">{{ statistics.remote_attack_count }}</div>
+                <div class="stat-label">Remote Attacks</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">
+                    {% if statistics.earliest_date and statistics.latest_date %}
+                        {{ ((statistics.latest_date - statistics.earliest_date).days) }}
+                    {% else %}
+                        N/A
+                    {% endif %}
+                </div>
+                <div class="stat-label">Days Span</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">
+                    {% if statistics.total_project_cost > 0 %}
+                        ${{ "%.2f"|format(statistics.total_project_cost) }}
+                    {% else %}
+                        N/A
+                    {% endif %}
+                </div>
+                <div class="stat-label">Total Project Cost</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">
+                    {% if statistics.cost_per_finding > 0 %}
+                        ${{ "%.2f"|format(statistics.cost_per_finding) }}
+                    {% else %}
+                        N/A
+                    {% endif %}
+                </div>
+                <div class="stat-label">Cost Per Finding</div>
+            </div>
+        </div>
+        
+        <h3 style="margin-top: 20px;">Key Insights</h3>
+        <ul class="insights-list">
+            {% if statistics.severity_counts.critical %}
+            <li><strong>{{ statistics.severity_counts.critical }}</strong> Critical severity findings require immediate attention</li>
+            {% endif %}
+            {% if statistics.severity_counts.high %}
+            <li><strong>{{ statistics.severity_counts.high }}</strong> High severity findings need prompt remediation</li>
+            {% endif %}
+            {% if statistics.status_counts.resolved %}
+            <li><strong>{{ statistics.status_counts.resolved }}</strong> findings have been resolved</li>
+            {% endif %}
+            {% if statistics.status_counts.open %}
+            <li><strong>{{ statistics.status_counts.open }}</strong> findings remain open and need action</li>
+            {% endif %}
+            {% if statistics.earliest_date %}
+            <li>Findings date range: {{ statistics.earliest_date.strftime('%Y-%m-%d') }} to {{ statistics.latest_date.strftime('%Y-%m-%d') }}</li>
+            {% endif %}
+            {% if statistics.project_names %}
+            <li>Projects analyzed: {{ statistics.project_names|join(', ') }}</li>
+            {% endif %}
+            {% if statistics.total_project_cost > 0 %}
+            <li>Total project cost: <strong>${{ "%.2f"|format(statistics.total_project_cost) }}</strong></li>
+            {% endif %}
+            {% if statistics.cost_per_finding > 0 %}
+            <li>Average cost per finding: <strong>${{ "%.2f"|format(statistics.cost_per_finding) }}</strong></li>
+            {% endif %}
+        </ul>
+    </div>
+
+    <!-- Severity Breakdown -->
+    {% if statistics.severity_counts %}
+    <div class="breakdown-section">
+        <div class="breakdown-title">Findings by Severity</div>
+        <div class="breakdown-grid">
+            {% for sev in ['critical', 'high', 'medium', 'low', 'info'] %}
+                {% set count = statistics.severity_counts.get(sev, 0) %}
+                <div class="breakdown-card breakdown-{{ sev }}">
+                    <div class="breakdown-value">{{ count }}</div>
+                    <div class="breakdown-label">{{ sev|capitalize }}</div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Status Breakdown -->
+    {% if statistics.status_counts %}
+    <div class="breakdown-section">
+        <div class="breakdown-title">Findings by Status</div>
+        <div class="breakdown-grid">
+            {% for status in ['open', 'in_progress', 'resolved', 'false_positive', 'ignored'] %}
+                {% set count = statistics.status_counts.get(status, 0) %}
+                {% if count > 0 %}
+                <div class="breakdown-card">
+                    <div class="breakdown-value">{{ count }}</div>
+                    <div class="breakdown-label">{{ status.replace('_', ' ')|title }}</div>
+                </div>
+                {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Findings List -->
+    <h2 style="text-align: center;">Findings Overview</h2>
+    <div class="findings-list-container">
+        <ul class="findings-list">
+            {% for project_name, project_findings in grouped_findings.items() %}
+                <li class="project-item">{{ project_name }}</li>
+                {% for finding in project_findings %}
+                    <li class="finding-item">
+                        <a href="#finding-{{ finding.id }}" class="finding-item-link">{{ finding.title }}</a>
+                        <span class="finding-meta-inline">
+                            {% set sev = (finding.severity.value if finding.severity is not string else finding.severity) | lower %}
+                            <span class="badge sev-{{ sev }}">{{ sev|capitalize }}</span>
+                            <span class="finding-meta-separator">•</span>
+                            {% set stat = (finding.status.value if finding.status is not string else finding.status) | lower %}
+                            <span class="status status-{{ stat }}">{{ stat.replace('_', ' ')|title }}</span>
+                            <span class="finding-meta-separator">•</span>
+                            <span>{{ finding.confirmations|length if finding.confirmations else 0 }} confirmation{% if finding.confirmations|length != 1 %}s{% endif %}</span>
+                        </span>
+                    </li>
+                {% endfor %}
+            {% endfor %}
+        </ul>
+    </div>
+
+    <!-- Detailed Findings -->
+    <h2>Detailed Findings</h2>
+    {% for finding in findings %}
+    <div class="finding-detail" id="finding-{{ finding.id }}">
+        <div class="finding-header">
+            <div class="finding-title">{{ finding.title }}</div>
+            <div class="finding-meta">
+                <span><strong>Project:</strong> {{ finding.project.name if finding.project else 'N/A' }}</span>
+                <span><strong>Severity:</strong> 
+                    {% set sev = (finding.severity.value if finding.severity is not string else finding.severity) | lower %}
+                    <span class="badge sev-{{ sev }}">{{ sev|capitalize }}</span>
+                </span>
+                <span><strong>Status:</strong> 
+                    {% set stat = (finding.status.value if finding.status is not string else finding.status) | lower %}
+                    <span class="status status-{{ stat }}">{{ stat.replace('_', ' ')|title }}</span>
+                </span>
+                <span><strong>Created:</strong> {{ finding.created_at.strftime('%Y-%m-%d %H:%M:%S') if finding.created_at else 'N/A' }}</span>
+                {% if finding.resolved_at %}
+                <span><strong>Resolved:</strong> {{ finding.resolved_at.strftime('%Y-%m-%d %H:%M:%S') }}</span>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="finding-section">
+            <div class="finding-section-title">Description</div>
+            <div class="finding-content">{{ finding.description|markdown|safe }}</div>
+        </div>
+
+        {% if finding.recommendation %}
+        <div class="finding-section">
+            <div class="finding-section-title">Recommendation</div>
+            <div class="finding-content">{{ finding.recommendation|markdown|safe }}</div>
+        </div>
+        {% endif %}
+
+        {% if finding.file_path %}
+        <div class="finding-section">
+            <div class="finding-section-title">File Path</div>
+            <div class="finding-content"><code>{{ finding.file_path }}</code></div>
+        </div>
+        {% endif %}
+
+        {% if finding.impacted_files %}
+        <div class="finding-section">
+            <div class="finding-section-title">Impacted Files</div>
+            <div class="finding-content">
+                {% for file_info in finding.impacted_files %}
+                    <div style="margin: 5px 0;">
+                        <code>{{ file_info.file_path }}</code>
+                        {% if file_info.lines %}
+                            (Lines: {{ file_info.lines|join(', ') }})
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Confirmations -->
+        {% if finding.confirmations %}
+        <!-- Confirmation Summary Table -->
+        <div class="confirmation-summary-section">
+            <div class="finding-section-title">Confirmation Summary ({{ finding.confirmations|length }})</div>
+            <table class="confirmation-summary-table">
+                <thead>
+                    <tr>
+                        <th>AI Model</th>
+                        <th>Vendor</th>
+                        <th>Status</th>
+                        <th>Remote Attack</th>
+                        <th>Validated At</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for confirmation in finding.confirmations %}
+                    <tr>
+                        <td><strong>{{ confirmation.model.model_name }}</strong></td>
+                        <td>{{ confirmation.model.vendor }}</td>
+                        <td>
+                            <span class="confirmation-badge {% if confirmation.false_positive %}confirmation-false-positive{% else %}confirmation-confirmed{% endif %}">
+                                {% if confirmation.false_positive %}False Positive{% else %}Confirmed{% endif %}
+                            </span>
+                        </td>
+                        <td>
+                            {% if confirmation.is_remote_attack %}
+                                <span style="color: #dc2626; font-weight: 600;">⚠ Yes</span>
+                            {% else %}
+                                <span style="color: #6b7280;">No</span>
+                            {% endif %}
+                        </td>
+                        <td style="color: #64748b; font-size: 9pt;">
+                            {{ confirmation.created_at.strftime('%Y-%m-%d %H:%M') if confirmation.created_at else 'N/A' }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Detailed Confirmations -->
+        <div class="finding-section">
+            <div class="finding-section-title">Detailed Analysis</div>
+            {% for confirmation in finding.confirmations %}
+            <div class="confirmation">
+                <div class="confirmation-header">
+                    <div class="confirmation-model">
+                        {{ confirmation.model.model_name }} ({{ confirmation.model.vendor }})
+                    </div>
+                    <span class="confirmation-badge {% if confirmation.false_positive %}confirmation-false-positive{% else %}confirmation-confirmed{% endif %}">
+                        {% if confirmation.false_positive %}False Positive{% else %}Confirmed{% endif %}
+                    </span>
+                </div>
+                <div class="confirmation-detail">
+                    <span class="confirmation-label">Justification:</span>
+                    <div class="confirmation-detail-content">{{ confirmation.justification|markdown|safe }}</div>
+                </div>
+                <div class="confirmation-detail">
+                    <span class="confirmation-label">Evidence Analysis:</span>
+                    <div class="confirmation-detail-content">{{ confirmation.evidence_analysis|markdown|safe }}</div>
+                </div>
+                <div class="confirmation-detail">
+                    <span class="confirmation-label">Exploit Feasibility:</span>
+                    <div class="confirmation-detail-content">{{ confirmation.exploit_feasibility|markdown|safe }}</div>
+                </div>
+                <div class="confirmation-detail">
+                    <span class="confirmation-label">Remote Attack:</span>
+                    {% if confirmation.is_remote_attack %}Yes{% else %}No{% endif %}
+                </div>
+                <div class="confirmation-detail" style="font-size: 8pt; color: #7f8c8d; margin-top: 8px;">
+                    Confirmed at: {{ confirmation.created_at.strftime('%Y-%m-%d %H:%M:%S') if confirmation.created_at else 'N/A' }}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="finding-section">
+            <div class="finding-section-title">Confirmations</div>
+            <div class="finding-content" style="color: #95a5a6; font-style: italic;">
+                No confirmations available for this finding.
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    {% endfor %}
+
+    {% else %}
+    <div class="no-findings">
+        <p>No findings matched the selected filters.</p>
+    </div>
+    {% endif %}
+
+    <div class="footer">
+        <p>Generated by Security Scanner</p>
+        <p>This report contains confidential security information and should be handled accordingly.</p>
+    </div>
+</body>
+</html>

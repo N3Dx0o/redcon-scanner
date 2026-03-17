@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+
+{% block title %}Export Report{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-3">
+        <div class="col-12 d-flex align-items-center justify-content-between">
+            <h2 class="mb-0"><i class="bi bi-file-earmark-pdf me-2"></i>Export Findings Report</h2>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header">Filters</div>
+        <div class="card-body">
+            <form method="POST" action="{{ url_for('export.export_pdf') }}" class="row g-3">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="col-md-3">
+                    <label for="project_id" class="form-label">Project</label>
+                    <select id="project_id" name="project_id" class="form-select">
+                        <option value="">All Projects</option>
+                        {% for p in projects %}
+                        <option value="{{ p.id }}">{{ p.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-md-3">
+                    <label for="severity" class="form-label">Severity</label>
+                    <select id="severity" name="severity" class="form-select">
+                        <option value="">All Severities</option>
+                        <option value="critical">Critical</option>
+                        <option value="high">High</option>
+                        <option value="medium">Medium</option>
+                        <option value="low">Low</option>
+                        <option value="info">Info</option>
+                    </select>
+                </div>
+
+                <div class="col-md-3">
+                    <label for="status" class="form-label">Status</label>
+                    <select id="status" name="status" class="form-select">
+                        <option value="">All Statuses</option>
+                        <option value="open">Open</option>
+                        <option value="in_progress">In Progress</option>
+                        <option value="resolved">Resolved</option>
+                        <option value="false_positive">False Positive</option>
+                        <option value="ignored">Ignored</option>
+                    </select>
+                </div>
+
+                <div class="col-md-3">
+                    <label for="search" class="form-label">Search</label>
+                    <input type="text" id="search" name="search" class="form-control" placeholder="Title or description contains...">
+                </div>
+
+                <div class="col-12 mt-2">
+                    <button type="submit" class="btn btn-danger" {% if is_windows %}disabled{% endif %}>
+                        <i class="bi bi-download me-1"></i>Download PDF
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    {% if is_windows %}
+    <div class="alert alert-warning">
+        PDF export is only available on non-Windows systems.
+    </div>
+    {% else %}
+    <div class="alert alert-info">
+        The PDF will be generated from an HTML report using WeasyPrint.
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+

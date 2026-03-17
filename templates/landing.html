@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>REDCON OFFENCE — AI-Powered Security Scanner</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+  <style>
+    :root {
+      --rc-bg:       #0d1117;
+      --rc-card:     #161b22;
+      --rc-border:   #2d333b;
+      --rc-primary:  #c9353f;
+      --rc-primary-h:#e05561;
+      --rc-text:     #f0f3f6;
+      --rc-muted:    #9198a1;
+      --rc-green:    #3fb950;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--rc-bg);
+      color: var(--rc-text);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* ── Nav ─────────────────────────────────────────────── */
+    .lp-nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+      background: rgba(13,17,23,0.85);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid rgba(45,51,59,0.6);
+      padding: 0.875rem 0;
+    }
+    .lp-nav-inner {
+      max-width: 1200px; margin: 0 auto;
+      padding: 0 1.5rem;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .lp-brand {
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 900; font-size: 1.15rem; letter-spacing: 0.15em;
+      color: var(--rc-primary); text-decoration: none;
+    }
+    .lp-brand span { color: var(--rc-muted); font-weight: 400; font-size: 0.95rem; margin-left: 0.3rem; }
+    .lp-nav-links { display: flex; align-items: center; gap: 1.5rem; }
+    .lp-nav-links a {
+      color: var(--rc-muted); text-decoration: none; font-size: 0.875rem; font-weight: 500;
+      transition: color 0.2s;
+    }
+    .lp-nav-links a:hover { color: var(--rc-text); }
+    .btn-rc {
+      display: inline-flex; align-items: center; gap: 0.4rem;
+      padding: 0.55rem 1.25rem; border-radius: 8px; font-weight: 600;
+      font-size: 0.875rem; text-decoration: none; transition: all 0.25s ease; cursor: pointer; border: none;
+    }
+    .btn-rc-primary { background: var(--rc-primary); color: #fff; }
+    .btn-rc-primary:hover { background: var(--rc-primary-h); color: #fff; box-shadow: 0 4px 20px rgba(201,53,63,0.4); transform: translateY(-1px); }
+    .btn-rc-outline { background: transparent; color: var(--rc-text); border: 1px solid var(--rc-border); }
+    .btn-rc-outline:hover { border-color: var(--rc-primary); color: var(--rc-primary); }
+
+    /* ── Hero ────────────────────────────────────────────── */
+    .hero {
+      min-height: 100vh;
+      display: flex; align-items: center; justify-content: center;
+      text-align: center;
+      padding: 8rem 1.5rem 5rem;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute; inset: 0;
+      background:
+        radial-gradient(ellipse at 50% 0%, rgba(201,53,63,0.18) 0%, transparent 60%),
+        radial-gradient(ellipse at 80% 80%, rgba(201,53,63,0.06) 0%, transparent 50%);
+    }
+    .hero::after {
+      content: '';
+      position: absolute; inset: 0;
+      background-image:
+        linear-gradient(rgba(201,53,63,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(201,53,63,0.04) 1px, transparent 1px);
+      background-size: 60px 60px;
+      pointer-events: none;
+    }
+    .hero-inner { position: relative; z-index: 1; max-width: 780px; margin: 0 auto; }
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      background: rgba(201,53,63,0.1); border: 1px solid rgba(201,53,63,0.3);
+      border-radius: 999px; padding: 0.35rem 0.9rem; font-size: 0.75rem;
+      font-weight: 600; color: #fca5a5; margin-bottom: 1.5rem; letter-spacing: 0.05em;
+    }
+    .hero h1 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 900; font-size: clamp(2.2rem, 5vw, 3.5rem);
+      line-height: 1.1; margin-bottom: 1.25rem; letter-spacing: -0.02em;
+    }
+    .hero h1 .accent { color: var(--rc-primary); }
+    .hero p {
+      font-size: clamp(1rem, 2vw, 1.15rem); color: var(--rc-muted);
+      max-width: 560px; margin: 0 auto 2rem; line-height: 1.7;
+    }
+    .hero-ctas { display: flex; gap: 0.875rem; justify-content: center; flex-wrap: wrap; }
+    .btn-lg-rc {
+      padding: 0.85rem 1.75rem; font-size: 1rem; border-radius: 10px; font-weight: 700;
+      text-decoration: none; display: inline-flex; align-items: center; gap: 0.5rem;
+      transition: all 0.25s ease; cursor: pointer; border: none;
+    }
+    .btn-lg-primary { background: var(--rc-primary); color: #fff; }
+    .btn-lg-primary:hover { background: var(--rc-primary-h); color: #fff; box-shadow: 0 6px 28px rgba(201,53,63,0.45); transform: translateY(-2px); }
+    .btn-lg-outline { background: transparent; color: var(--rc-text); border: 1px solid var(--rc-border); }
+    .btn-lg-outline:hover { border-color: rgba(201,53,63,0.5); color: var(--rc-primary); }
+
+    /* Hero mock terminal */
+    .hero-terminal {
+      max-width: 600px; margin: 3.5rem auto 0;
+      background: #0a0e14; border: 1px solid var(--rc-border);
+      border-radius: 12px; overflow: hidden;
+      box-shadow: 0 24px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(201,53,63,0.08);
+    }
+    .terminal-bar {
+      background: #161b22; padding: 0.65rem 1rem;
+      display: flex; align-items: center; gap: 0.5rem;
+      border-bottom: 1px solid var(--rc-border);
+    }
+    .terminal-dot { width: 12px; height: 12px; border-radius: 50%; }
+    .terminal-body { padding: 1rem 1.25rem; text-align: left; font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; line-height: 1.8; }
+    .t-dim  { color: #636c76; }
+    .t-red  { color: #ff6b6b; }
+    .t-yel  { color: #fde68a; }
+    .t-grn  { color: var(--rc-green); }
+    .t-blu  { color: #79c0ff; }
+    .t-wht  { color: var(--rc-text); }
+
+    /* ── Section common ───────────────────────────────────── */
+    section { padding: 6rem 1.5rem; }
+    .section-inner { max-width: 1200px; margin: 0 auto; }
+    .section-label {
+      font-size: 0.7rem; font-weight: 700; letter-spacing: 0.2em;
+      text-transform: uppercase; color: var(--rc-primary); margin-bottom: 0.75rem;
+    }
+    .section-title {
+      font-family: 'Space Grotesk', sans-serif; font-weight: 700;
+      font-size: clamp(1.6rem, 3.5vw, 2.25rem); line-height: 1.2;
+      margin-bottom: 1rem;
+    }
+    .section-sub { color: var(--rc-muted); font-size: 1rem; max-width: 540px; line-height: 1.7; }
+
+    /* ── Feature cards ────────────────────────────────────── */
+    .feature-card {
+      background: var(--rc-card); border: 1px solid var(--rc-border);
+      border-radius: 14px; padding: 1.75rem;
+      transition: border-color 0.25s, transform 0.25s, box-shadow 0.25s;
+    }
+    .feature-card:hover {
+      border-color: rgba(201,53,63,0.4);
+      transform: translateY(-4px);
+      box-shadow: 0 16px 48px rgba(0,0,0,0.4), 0 0 0 1px rgba(201,53,63,0.1);
+    }
+    .feature-icon {
+      width: 52px; height: 52px; border-radius: 12px;
+      background: rgba(201,53,63,0.12); border: 1px solid rgba(201,53,63,0.25);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.4rem; color: var(--rc-primary); margin-bottom: 1.1rem;
+    }
+    .feature-card h3 { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 1.1rem; margin-bottom: 0.5rem; }
+    .feature-card p  { color: var(--rc-muted); font-size: 0.875rem; line-height: 1.65; }
+
+    /* ── How it works ─────────────────────────────────────── */
+    .hiw-section { background: #0a0e14; }
+    .hiw-step {
+      display: flex; gap: 1.25rem; align-items: flex-start;
+    }
+    .hiw-num {
+      width: 44px; height: 44px; border-radius: 50%; flex-shrink: 0;
+      background: rgba(201,53,63,0.12); border: 2px solid rgba(201,53,63,0.3);
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Space Grotesk', sans-serif; font-weight: 700;
+      font-size: 1rem; color: var(--rc-primary);
+    }
+    .hiw-step h4 { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 1rem; margin-bottom: 0.3rem; }
+    .hiw-step p  { color: var(--rc-muted); font-size: 0.875rem; line-height: 1.6; }
+
+    /* ── Stats ────────────────────────────────────────────── */
+    .stats-section { background: linear-gradient(135deg, rgba(201,53,63,0.08) 0%, transparent 60%); }
+    .stat-card {
+      text-align: center; padding: 2rem 1rem;
+      border-right: 1px solid var(--rc-border);
+    }
+    .stat-card:last-child { border-right: none; }
+    .stat-num {
+      font-family: 'Space Grotesk', sans-serif; font-weight: 900;
+      font-size: clamp(2rem, 4vw, 2.75rem); color: var(--rc-text);
+      line-height: 1; margin-bottom: 0.5rem;
+    }
+    .stat-num .stat-accent { color: var(--rc-primary); }
+    .stat-label { color: var(--rc-muted); font-size: 0.875rem; font-weight: 500; }
+
+    /* ── Pricing ──────────────────────────────────────────── */
+    .pricing-card {
+      background: var(--rc-card); border: 1px solid var(--rc-border);
+      border-radius: 16px; padding: 2rem; height: 100%;
+      display: flex; flex-direction: column;
+      transition: border-color 0.25s, box-shadow 0.25s;
+    }
+    .pricing-card.featured {
+      border-color: rgba(201,53,63,0.5);
+      box-shadow: 0 0 0 1px rgba(201,53,63,0.15), 0 24px 60px rgba(0,0,0,0.4);
+    }
+    .pricing-card h3 { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 1.1rem; margin-bottom: 0.5rem; }
+    .price-amount {
+      font-family: 'Space Grotesk', sans-serif; font-weight: 900;
+      font-size: 2.5rem; color: var(--rc-text); line-height: 1; margin-bottom: 0.25rem;
+    }
+    .price-amount small { font-size: 0.9rem; font-weight: 500; color: var(--rc-muted); }
+    .price-desc { color: var(--rc-muted); font-size: 0.85rem; margin-bottom: 1.5rem; }
+    .pricing-features { list-style: none; padding: 0; flex: 1; margin-bottom: 1.5rem; }
+    .pricing-features li {
+      display: flex; align-items: center; gap: 0.6rem;
+      font-size: 0.875rem; color: var(--rc-muted); padding: 0.4rem 0;
+      border-bottom: 1px solid rgba(45,51,59,0.5);
+    }
+    .pricing-features li:last-child { border-bottom: none; }
+    .pricing-features li i { color: var(--rc-green); font-size: 0.9rem; flex-shrink: 0; }
+    .badge-soon {
+      background: rgba(201,53,63,0.15); border: 1px solid rgba(201,53,63,0.3);
+      color: #fca5a5; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.08em;
+      padding: 0.2rem 0.5rem; border-radius: 4px; text-transform: uppercase;
+      vertical-align: middle; margin-left: 0.4rem;
+    }
+
+    /* ── Footer ───────────────────────────────────────────── */
+    footer {
+      background: #0a0e14; border-top: 1px solid var(--rc-border);
+      padding: 3rem 1.5rem;
+    }
+    .footer-inner { max-width: 1200px; margin: 0 auto; }
+    .footer-brand {
+      font-family: 'Space Grotesk', sans-serif; font-weight: 900;
+      font-size: 1.1rem; letter-spacing: 0.15em; color: var(--rc-primary);
+    }
+    .footer-brand span { color: var(--rc-muted); font-weight: 400; font-size: 0.9rem; }
+    .footer-motto { font-size: 0.7rem; letter-spacing: 0.2em; color: #636c76; text-transform: uppercase; margin-top: 0.25rem; }
+    .footer-links a {
+      color: var(--rc-muted); text-decoration: none; font-size: 0.875rem;
+      transition: color 0.2s;
+    }
+    .footer-links a:hover { color: var(--rc-text); }
+    .footer-copy { color: #636c76; font-size: 0.8rem; }
+
+    /* ── Divider gradient line ────────────────────────────── */
+    .section-divider { height: 1px; background: linear-gradient(90deg, transparent, var(--rc-border), transparent); }
+
+    @media (max-width: 768px) {
+      .lp-nav-links .lp-nav-extra { display: none; }
+      .stat-card { border-right: none; border-bottom: 1px solid var(--rc-border); }
+      .stat-card:last-child { border-bottom: none; }
+      .hero-terminal { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── NAV ─────────────────────────────────────────────────────────────────── -->
+<nav class="lp-nav">
+  <div class="lp-nav-inner">
+    <a href="/welcome" class="lp-brand">REDCON<span>OFFENCE</span></a>
+    <div class="lp-nav-links">
+      <a href="#features" class="lp-nav-extra">Features</a>
+      <a href="#how-it-works" class="lp-nav-extra">How it Works</a>
+      <a href="#pricing" class="lp-nav-extra">Pricing</a>
+      <a href="/login" class="btn-rc btn-rc-outline">Sign In</a>
+      <a href="/register" class="btn-rc btn-rc-primary"><i class="bi bi-lightning-fill"></i> Get Started</a>
+    </div>
+  </div>
+</nav>
+
+<!-- ── HERO ────────────────────────────────────────────────────────────────── -->
+<section class="hero" id="top">
+  <div class="hero-inner">
+    <div class="hero-badge">
+      <i class="bi bi-shield-fill-check"></i>
+      AI-Powered Security Analysis
+    </div>
+
+    <h1>
+      Find Vulnerabilities<br>
+      <span class="accent">Before Attackers Do.</span>
+    </h1>
+
+    <p>
+      Automatically scan your codebase for security vulnerabilities using multiple AI models.
+      Get actionable findings in minutes, not weeks. Built for teams who ship fast.
+    </p>
+
+    <div class="hero-ctas">
+      <a href="/register" class="btn-lg-rc btn-lg-primary">
+        <i class="bi bi-lightning-fill"></i> Start Free Trial
+      </a>
+      <a href="#features" class="btn-lg-rc btn-lg-outline">
+        <i class="bi bi-play-circle"></i> View Features
+      </a>
+    </div>
+
+    <!-- Mock terminal -->
+    <div class="hero-terminal">
+      <div class="terminal-bar">
+        <div class="terminal-dot" style="background:#ff5f56;"></div>
+        <div class="terminal-dot" style="background:#ffbd2e;"></div>
+        <div class="terminal-dot" style="background:#27c93f;"></div>
+        <span style="margin-left:0.5rem;font-size:0.75rem;color:#636c76;font-family:'JetBrains Mono',monospace;">redcon-scanner — scan</span>
+      </div>
+      <div class="terminal-body">
+        <div><span class="t-dim">$</span> <span class="t-blu">redcon</span> <span class="t-wht">scan</span> <span class="t-yel">--project</span> my-app <span class="t-yel">--models</span> all</div>
+        <div class="t-dim">  Initializing REDCON Scanner v2.4.1...</div>
+        <div class="t-dim">  Loading 45 threat models... <span class="t-grn">done</span></div>
+        <div class="t-dim">  Connecting to AI provider (Anthropic)... <span class="t-grn">done</span></div>
+        <div><span class="t-yel">  [1/8]</span> <span class="t-wht">Analyzing authentication layer...</span></div>
+        <div><span class="t-red">  ⚠ CRITICAL</span> <span class="t-wht">SQL injection in user login handler</span></div>
+        <div><span class="t-red">  ⚠ HIGH   </span> <span class="t-wht">JWT token not validated server-side</span></div>
+        <div><span class="t-yel">  [3/8]</span> <span class="t-wht">Scanning cryptographic implementations...</span></div>
+        <div><span class="t-yel">  ⚠ MEDIUM </span> <span class="t-wht">Weak entropy in key generation (ECB mode)</span></div>
+        <div><span class="t-grn">  ✔</span> <span class="t-wht">Scan complete. 3 critical, 5 high, 12 medium findings.</span></div>
+        <div><span class="t-dim">  Report exported → findings_2026-03-14.json</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- ── STATS ───────────────────────────────────────────────────────────────── -->
+<section class="stats-section py-5" id="stats">
+  <div class="section-inner">
+    <div class="row g-0 text-center" style="border:1px solid var(--rc-border);border-radius:16px;overflow:hidden;background:var(--rc-card);">
+      <div class="col-6 col-md-3 stat-card">
+        <div class="stat-num"><span class="stat-accent">12,847</span></div>
+        <div class="stat-label">Vulnerabilities Found</div>
+      </div>
+      <div class="col-6 col-md-3 stat-card">
+        <div class="stat-num">340<span class="stat-accent">+</span></div>
+        <div class="stat-label">Projects Scanned</div>
+      </div>
+      <div class="col-6 col-md-3 stat-card">
+        <div class="stat-num">45<span class="stat-accent">+</span></div>
+        <div class="stat-label">Threat Models</div>
+      </div>
+      <div class="col-6 col-md-3 stat-card">
+        <div class="stat-num">99<span class="stat-accent">%</span></div>
+        <div class="stat-label">Fewer False Positives</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- ── FEATURES ────────────────────────────────────────────────────────────── -->
+<section id="features">
+  <div class="section-inner">
+    <div class="text-center mb-5">
+      <div class="section-label">Capabilities</div>
+      <h2 class="section-title">Everything Your Security Team Needs</h2>
+      <p class="section-sub mx-auto">
+        REDCON Scanner is the only tool that combines multiple AI models with expert-curated threat models
+        to surface real vulnerabilities with actionable remediation advice.
+      </p>
+    </div>
+
+    <div class="row g-4">
+      <div class="col-md-4">
+        <div class="feature-card">
+          <div class="feature-icon"><i class="bi bi-shield-exclamation"></i></div>
+          <h3>45+ Threat Models</h3>
+          <p>Comprehensive coverage across blockchain smart contracts, web applications, infrastructure, AI/ML pipelines, cryptographic protocols, and mobile applications. Constantly updated with emerging attack vectors.</p>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="feature-card">
+          <div class="feature-icon"><i class="bi bi-cpu"></i></div>
+          <h3>Multi-Model AI</h3>
+          <p>Use OpenAI GPT-4, Anthropic Claude, Google Gemini, xAI Grok, DeepSeek, or self-hosted Ollama. Run scans across multiple providers simultaneously and correlate findings for higher confidence.</p>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="feature-card">
+          <div class="feature-icon"><i class="bi bi-git"></i></div>
+          <h3>CI/CD Ready</h3>
+          <p>Integrate into your pipeline via API key authentication. Scan on every pull request, block merges on critical findings, and export results as JSON, PDF, or CSV for your security toolchain.</p>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="feature-card">
+          <div class="feature-icon"><i class="bi bi-eye"></i></div>
+          <h3>Focus Mode</h3>
+          <p>Navigate findings one at a time with full context. Confirm real bugs, mark false positives, and track remediation status. Built for security engineers who need to move fast.</p>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="feature-card">
+          <div class="feature-icon"><i class="bi bi-bar-chart"></i></div>
+          <h3>Analytics Dashboard</h3>
+          <p>Track vulnerability trends over time, measure remediation velocity, and generate executive-ready reports. Understand your attack surface at a glance with severity and category breakdowns.</p>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="feature-card">
+          <div class="feature-icon"><i class="bi bi-people"></i></div>
+          <h3>Team Collaboration</h3>
+          <p>Multi-user support with admin controls. Assign findings, share projects, and manage team access. Keep your entire security team aligned on what matters most.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- ── HOW IT WORKS ─────────────────────────────────────────────────────────── -->
+<section class="hiw-section" id="how-it-works">
+  <div class="section-inner">
+    <div class="row align-items-center g-5">
+      <div class="col-lg-5">
+        <div class="section-label">Process</div>
+        <h2 class="section-title">From Code to Findings in Minutes</h2>
+        <p class="section-sub">
+          No agents to install. No complex configuration. Upload your code and get a comprehensive security report.
+        </p>
+      </div>
+      <div class="col-lg-7">
+        <div style="display:flex;flex-direction:column;gap:1.75rem;">
+          <div class="hiw-step">
+            <div class="hiw-num">1</div>
+            <div>
+              <h4>Upload Your Code</h4>
+              <p>Drag and drop a ZIP archive of your codebase or provide a public Git repository URL. REDCON Scanner supports any language and framework.</p>
+            </div>
+          </div>
+          <div style="width:2px;height:20px;background:linear-gradient(180deg,rgba(201,53,63,0.4),transparent);margin-left:21px;"></div>
+          <div class="hiw-step">
+            <div class="hiw-num">2</div>
+            <div>
+              <h4>Select Threat Models &amp; AI Provider</h4>
+              <p>Choose from 45+ threat models tailored to your stack — web, blockchain, crypto, AI/ML, infrastructure. Select one or multiple AI providers to maximize coverage.</p>
+            </div>
+          </div>
+          <div style="width:2px;height:20px;background:linear-gradient(180deg,rgba(201,53,63,0.4),transparent);margin-left:21px;"></div>
+          <div class="hiw-step">
+            <div class="hiw-num">3</div>
+            <div>
+              <h4>Get Detailed Findings with Remediation</h4>
+              <p>Each finding includes severity, affected code, root cause analysis, and step-by-step remediation advice. Export to your ticketing system or share with your team instantly.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- ── PRICING ─────────────────────────────────────────────────────────────── -->
+<section id="pricing">
+  <div class="section-inner">
+    <div class="text-center mb-5">
+      <div class="section-label">Pricing</div>
+      <h2 class="section-title">Simple, Transparent Pricing</h2>
+      <p class="section-sub mx-auto">Start for free and scale as your team grows. No hidden fees, no per-seat surprises.</p>
+    </div>
+
+    <div class="row g-4 justify-content-center">
+
+      <!-- Starter -->
+      <div class="col-md-4">
+        <div class="pricing-card">
+          <h3>Starter</h3>
+          <div class="price-amount">Free</div>
+          <div class="price-desc">Perfect for solo developers and small projects</div>
+          <ul class="pricing-features">
+            <li><i class="bi bi-check-circle-fill"></i> 1 active project</li>
+            <li><i class="bi bi-check-circle-fill"></i> 50 scans / month</li>
+            <li><i class="bi bi-check-circle-fill"></i> OpenAI integration</li>
+            <li><i class="bi bi-check-circle-fill"></i> 10 threat models</li>
+            <li><i class="bi bi-check-circle-fill"></i> JSON export</li>
+            <li><i class="bi bi-check-circle-fill"></i> Community support</li>
+          </ul>
+          <a href="/register" class="btn-rc btn-rc-outline d-block text-center">Get Started Free</a>
+        </div>
+      </div>
+
+      <!-- Pro -->
+      <div class="col-md-4">
+        <div class="pricing-card featured">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.5rem;">
+            <h3 style="margin-bottom:0;">Pro</h3>
+            <span class="badge-soon">Coming Soon</span>
+          </div>
+          <div class="price-amount">$49 <small>/ mo</small></div>
+          <div class="price-desc">For growing teams and production applications</div>
+          <ul class="pricing-features">
+            <li><i class="bi bi-check-circle-fill"></i> Unlimited projects</li>
+            <li><i class="bi bi-check-circle-fill"></i> Unlimited scans</li>
+            <li><i class="bi bi-check-circle-fill"></i> All AI providers</li>
+            <li><i class="bi bi-check-circle-fill"></i> 45+ threat models</li>
+            <li><i class="bi bi-check-circle-fill"></i> Email notifications</li>
+            <li><i class="bi bi-check-circle-fill"></i> API access</li>
+            <li><i class="bi bi-check-circle-fill"></i> PDF &amp; CSV export</li>
+            <li><i class="bi bi-check-circle-fill"></i> Priority support</li>
+          </ul>
+          <button class="btn-rc btn-rc-primary d-block w-100 text-center" style="opacity:0.65;cursor:not-allowed;" disabled>
+            Coming Soon
+          </button>
+        </div>
+      </div>
+
+      <!-- Enterprise -->
+      <div class="col-md-4">
+        <div class="pricing-card">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.5rem;">
+            <h3 style="margin-bottom:0;">Enterprise</h3>
+            <span class="badge-soon">Coming Soon</span>
+          </div>
+          <div class="price-amount" style="font-size:1.75rem;">Custom</div>
+          <div class="price-desc">For large organizations with advanced security needs</div>
+          <ul class="pricing-features">
+            <li><i class="bi bi-check-circle-fill"></i> Everything in Pro</li>
+            <li><i class="bi bi-check-circle-fill"></i> SSO / SAML</li>
+            <li><i class="bi bi-check-circle-fill"></i> On-premise deployment</li>
+            <li><i class="bi bi-check-circle-fill"></i> Dedicated support</li>
+            <li><i class="bi bi-check-circle-fill"></i> Custom threat models</li>
+            <li><i class="bi bi-check-circle-fill"></i> SLA guarantee</li>
+            <li><i class="bi bi-check-circle-fill"></i> Audit logs</li>
+          </ul>
+          <a href="mailto:security@redconoffence.com" class="btn-rc btn-rc-outline d-block text-center">Contact Sales</a>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- ── CTA BANNER ──────────────────────────────────────────────────────────── -->
+<section style="padding:5rem 1.5rem;background:linear-gradient(135deg,rgba(201,53,63,0.1) 0%,transparent 60%);">
+  <div class="section-inner text-center">
+    <h2 class="section-title" style="margin-bottom:1rem;">Ready to Secure Your Codebase?</h2>
+    <p class="section-sub mx-auto" style="margin-bottom:2rem;">
+      Join hundreds of security teams using REDCON Scanner to find vulnerabilities before they reach production.
+    </p>
+    <a href="/register" class="btn-lg-rc btn-lg-primary">
+      <i class="bi bi-lightning-fill"></i> Start Free — No Credit Card Required
+    </a>
+  </div>
+</section>
+
+<!-- ── FOOTER ──────────────────────────────────────────────────────────────── -->
+<footer>
+  <div class="footer-inner">
+    <div class="row align-items-center g-4">
+      <div class="col-md-4">
+        <div class="footer-brand">REDCON<span>OFFENCE</span></div>
+        <div class="footer-motto">Unmatched Perception. Unbroken Will.</div>
+      </div>
+      <div class="col-md-4 text-center footer-links d-flex justify-content-center gap-4 flex-wrap">
+        <a href="#features">Product</a>
+        <a href="#">Docs</a>
+        <a href="#">Security</a>
+        <a href="#">Privacy</a>
+      </div>
+      <div class="col-md-4 text-md-end footer-copy">
+        &copy; 2026 REDCON OFFENCE. All rights reserved.
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+// Smooth counter animation for stats
+function animateCounters() {
+  document.querySelectorAll('.stat-num').forEach(function(el) {
+    var text = el.textContent;
+    var num = parseFloat(text.replace(/[^0-9.]/g, ''));
+    if (isNaN(num)) return;
+    var prefix = text.match(/^[^0-9]*/)[0];
+    var suffix = text.match(/[^0-9.]*$/)[0];
+    var duration = 1800;
+    var start = performance.now();
+    function step(now) {
+      var elapsed = now - start;
+      var progress = Math.min(elapsed / duration, 1);
+      var eased = 1 - Math.pow(1 - progress, 3);
+      var current = Math.round(eased * num);
+      // Format with commas
+      el.innerHTML = prefix + current.toLocaleString() + suffix;
+      if (progress < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  });
+}
+
+// Intersection observer to trigger counters when stats section is visible
+var statsSection = document.getElementById('stats');
+if (statsSection && 'IntersectionObserver' in window) {
+  var io = new IntersectionObserver(function(entries) {
+    if (entries[0].isIntersecting) {
+      animateCounters();
+      io.disconnect();
+    }
+  }, { threshold: 0.3 });
+  io.observe(statsSection);
+}
+</script>
+</body>
+</html>

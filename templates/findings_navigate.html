@@ -1,0 +1,428 @@
+{% extends "base.html" %}
+
+{% block title %}Focus Mode - Security Scanner{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <!-- Header -->
+            <div class="mb-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div>
+                        <h1 class="h3 mb-1">Focus Mode</h1>
+                        <p class="text-muted mb-0">Navigate through findings one at a time for focused analysis</p>
+                    </div>
+                </div>
+                
+                <!-- Filters -->
+                <div class="card">
+                    <div class="card-body">
+                        <form method="GET" id="filterForm" class="row g-3">
+                            <div class="col-md-3">
+                                <label for="severityFilter" class="form-label">Severity</label>
+                                <select class="form-select form-select-sm" id="severityFilter" name="severity">
+                                    <option value="">All Severities</option>
+                                    <option value="critical" {% if selected_severity == 'critical' %}selected{% endif %}>Critical</option>
+                                    <option value="high" {% if selected_severity == 'high' %}selected{% endif %}>High</option>
+                                    <option value="medium" {% if selected_severity == 'medium' %}selected{% endif %}>Medium</option>
+                                    <option value="low" {% if selected_severity == 'low' %}selected{% endif %}>Low</option>
+                                    <option value="info" {% if selected_severity == 'info' %}selected{% endif %}>Info</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label for="statusFilter" class="form-label">Status</label>
+                                <select class="form-select form-select-sm" id="statusFilter" name="status">
+                                    <option value="">All Statuses</option>
+                                    <option value="open" {% if selected_status == 'open' %}selected{% endif %}>Open</option>
+                                    <option value="in_progress" {% if selected_status == 'in_progress' %}selected{% endif %}>In Progress</option>
+                                    <option value="resolved" {% if selected_status == 'resolved' %}selected{% endif %}>Resolved</option>
+                                    <option value="false_positive" {% if selected_status == 'false_positive' %}selected{% endif %}>False Positive</option>
+                                    <option value="ignored" {% if selected_status == 'ignored' %}selected{% endif %}>Ignored</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label for="projectFilter" class="form-label">Project</label>
+                                <select class="form-select form-select-sm" id="projectFilter" name="project_id">
+                                    <option value="">All Projects</option>
+                                    {% for project in projects %}
+                                    <option value="{{ project.id }}" {% if selected_project_id and selected_project_id|int == project.id %}selected{% endif %}>{{ project.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label for="filePathFilter" class="form-label">File path</label>
+                                <input type="text" class="form-control form-control-sm" id="filePathFilter" name="file_path" placeholder="e.g. pallets/marketplace" value="{{ selected_file_path or '' }}">
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label">&nbsp;</label>
+                                <button type="submit" class="btn btn-primary btn-sm w-100">Apply Filters</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            {% if findings %}
+            <div class="row">
+                <!-- Main Content Area -->
+                <div class="col-lg-8">
+                    <div class="card finding-card" id="currentFinding">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <div class="d-flex align-items-center gap-3">
+                                <span class="badge severity-{{ current_finding.severity.value }}">{{ current_finding.severity.value.title() }}</span>
+                                <span class="badge status-{{ current_finding.status.value.replace('_', '-') }}">{{ current_finding.status.value.replace('_', ' ').title() }}</span>
+                            </div>
+                            <div class="text-muted">
+                                {{ current_index + 1 }} of {{ findings|length }}
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <h4 class="card-title mb-3">{{ current_finding.title }}</h4>
+                            
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <div class="mb-2">
+                                        <strong>Project:</strong> {{ current_finding.project.name }}
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-2">
+                                        <strong>File:</strong> 
+                                        <code class="text-muted">{{ current_finding.file_path }}</code>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <strong>Description:</strong>
+                                <div class="mt-2 markdown-content">{{ current_finding.description|markdown|safe }}</div>
+                            </div>
+                            
+                            {% if current_finding.recommendation %}
+                            <div class="mb-3">
+                                <strong>Recommendation:</strong>
+                                <div class="mt-2 markdown-content">{{ current_finding.recommendation|markdown|safe }}</div>
+                            </div>
+                            {% endif %}
+                            
+                            <div class="mb-3">
+                                <strong>Created:</strong> {{ current_finding.created_at.strftime('%Y-%m-%d %H:%M') }}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Confirmations Section -->
+                    {% if current_finding.confirmations and current_finding.confirmations|length > 0 %}
+                    <div class="card finding-card mt-4">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">
+                                <i class="bi bi-robot me-2"></i>AI Confirmations
+                            </h5>
+                            <span class="badge bg-primary">{{ current_finding.confirmations|length }}</span>
+                        </div>
+                        <div class="card-body">
+                            {% for confirmation in current_finding.confirmations %}
+                            <div class="confirmation-item mb-4 pb-4 {% if not loop.last %}border-bottom{% endif %}">
+                                <div class="d-flex justify-content-between align-items-start mb-3">
+                                    <div>
+                                        <h6 class="mb-1">
+                                            <i class="bi bi-robot me-1"></i>{{ confirmation.model.model_name }}
+                                        </h6>
+                                        <small class="text-muted">{{ confirmation.model.vendor }}</small>
+                                    </div>
+                                    <div class="text-end">
+                                        {% if confirmation.false_positive %}
+                                        <span class="badge bg-warning text-dark">
+                                            <i class="bi bi-exclamation-triangle me-1"></i>False Positive
+                                        </span>
+                                        {% else %}
+                                        <span class="badge bg-success">
+                                            <i class="bi bi-check-circle me-1"></i>Confirmed
+                                        </span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                
+                                <!-- Justification -->
+                                <div class="mb-3">
+                                    <small class="text-muted d-block mb-2 fw-bold">Justification:</small>
+                                    <div class="border rounded p-3 bg-light text-small markdown-content">
+                                        {{ confirmation.justification|markdown|safe }}
+                                    </div>
+                                </div>
+                                
+                                <!-- Evidence Analysis -->
+                                <div class="mb-3">
+                                    <small class="text-muted d-block mb-2 fw-bold">Evidence Analysis:</small>
+                                    <div class="border rounded p-3 bg-light text-small markdown-content">
+                                        {{ confirmation.evidence_analysis|markdown|safe }}
+                                    </div>
+                                </div>
+                                
+                                <!-- Exploit Feasibility -->
+                                <div class="mb-3">
+                                    <small class="text-muted d-block mb-2 fw-bold">Exploit Feasibility:</small>
+                                    <div class="border rounded p-3 bg-light text-small markdown-content">
+                                        {{ confirmation.exploit_feasibility|markdown|safe }}
+                                    </div>
+                                </div>
+                                
+                                <!-- Additional Details -->
+                                <div class="d-flex gap-3 mt-2">
+                                    {% if confirmation.is_remote_attack %}
+                                    <span class="badge bg-danger">
+                                        <i class="bi bi-globe me-1"></i>Remote Attack
+                                    </span>
+                                    {% endif %}
+                                    <small class="text-muted ms-auto">
+                                        <i class="bi bi-clock me-1"></i>{{ confirmation.created_at.strftime('%Y-%m-%d %H:%M') }}
+                                    </small>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <!-- Sidebar with Actions and Info -->
+                <div class="col-lg-4">
+                    <!-- Quick Actions -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h6 class="mb-0"><i class="bi bi-lightning me-2"></i>Quick Actions</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="d-grid gap-2">
+                                <button class="btn btn-success" onclick="updateStatus('resolved')">
+                                    <i class="bi bi-check-circle me-2"></i>Mark Resolved
+                                </button>
+                                <button class="btn btn-warning" onclick="updateStatus('in_progress')">
+                                    <i class="bi bi-clock me-2"></i>In Progress
+                                </button>
+                                <button class="btn btn-secondary" onclick="updateStatus('false_positive')">
+                                    <i class="bi bi-x-circle me-2"></i>False Positive
+                                </button>
+                                <button class="btn btn-outline-secondary" onclick="updateStatus('ignored')">
+                                    <i class="bi bi-eye-slash me-2"></i>Ignore
+                                </button>
+                            </div>
+                            <hr>
+                            <div class="d-grid gap-2">
+                                <button class="btn btn-outline-info" onclick="copyFindingAsMarkdown(this)">
+                                    <i class="bi bi-clipboard me-2"></i>Copy as Markdown
+                                </button>
+                                <a href="{{ url_for('findings.finding_detail', finding_id=current_finding.id) }}" class="btn btn-outline-primary">
+                                    <i class="bi bi-eye me-2"></i>View Full Details
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Navigation Controls -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h6 class="mb-0"><i class="bi bi-arrow-left-right me-2"></i>Navigation</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                {% if current_index > 0 %}
+                                    {% set prev_params = {'index': current_index - 1} %}
+                                    {% if selected_severity %}{% set _ = prev_params.update({'severity': selected_severity}) %}{% endif %}
+                                    {% if selected_status %}{% set _ = prev_params.update({'status': selected_status}) %}{% endif %}
+                                    {% if selected_project_id %}{% set _ = prev_params.update({'project_id': selected_project_id}) %}{% endif %}
+                                    {% if selected_file_path %}{% set _ = prev_params.update({'file_path': selected_file_path}) %}{% endif %}
+                                    <a href="{{ url_for('findings.findings_navigate', **prev_params) }}" class="btn btn-outline-secondary">
+                                        <i class="bi bi-chevron-left me-1"></i>Previous
+                                    </a>
+                                {% else %}
+                                    <button class="btn btn-outline-secondary" disabled>
+                                        <i class="bi bi-chevron-left me-1"></i>Previous
+                                    </button>
+                                {% endif %}
+                                
+                                {% if current_index < findings|length - 1 %}
+                                    {% set next_params = {'index': current_index + 1} %}
+                                    {% if selected_severity %}{% set _ = next_params.update({'severity': selected_severity}) %}{% endif %}
+                                    {% if selected_status %}{% set _ = next_params.update({'status': selected_status}) %}{% endif %}
+                                    {% if selected_project_id %}{% set _ = next_params.update({'project_id': selected_project_id}) %}{% endif %}
+                                    {% if selected_file_path %}{% set _ = next_params.update({'file_path': selected_file_path}) %}{% endif %}
+                                    <a href="{{ url_for('findings.findings_navigate', **next_params) }}" class="btn btn-primary">
+                                        Next <i class="bi bi-chevron-right ms-1"></i>
+                                    </a>
+                                {% else %}
+                                    <button class="btn btn-success" disabled>
+                                        Complete <i class="bi bi-check-circle ms-1"></i>
+                                    </button>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="text-center">
+                                <div class="progress mb-2">
+                                    <div class="progress-bar" role="progressbar" style="width: {{ ((current_index + 1) / findings|length * 100)|round(1) }}%"></div>
+                                </div>
+                                <small class="text-muted">{{ current_index + 1 }} of {{ findings|length }} findings</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Statistics -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="mb-0"><i class="bi bi-bar-chart me-2"></i>Statistics</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row g-2">
+                                {% for severity in ['critical', 'high', 'medium', 'low'] %}
+                                <div class="col-6">
+                                    <div class="text-center p-2 rounded" style="background-color: rgba({{ '220, 53, 69' if severity == 'critical' else '253, 126, 20' if severity == 'high' else '13, 202, 240' if severity == 'medium' else '25, 135, 84' }}, 0.1);">
+                                        <div class="h5 mb-0 text-{{ 'danger' if severity == 'critical' else 'warning' if severity == 'high' else 'info' if severity == 'medium' else 'success' }}">
+                                            {{ findings|selectattr('severity.value', 'equalto', severity)|list|length }}
+                                        </div>
+                                        <small class="text-muted text-capitalize">{{ severity }}</small>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            {% else %}
+            <!-- Empty State -->
+            <div class="card">
+                <div class="card-body text-center py-5">
+                    <i class="bi bi-bug display-1 text-muted mb-4"></i>
+                    <h4 class="text-muted mb-3">No Findings Found</h4>
+                    <p class="text-muted mb-4">No security findings have been detected yet. Create a project and run analysis to get started.</p>
+                    <a href="{{ url_for('projects.project_onboarding') }}" class="btn btn-primary">
+                        <i class="bi bi-plus-circle me-2"></i>Create Project
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-submit filters on change
+    const filterInputs = document.querySelectorAll('#severityFilter, #statusFilter, #projectFilter');
+    filterInputs.forEach(input => {
+        input.addEventListener('change', function() {
+            document.getElementById('filterForm').submit();
+        });
+    });
+});
+
+function updateStatus(status) {
+    {% if current_finding %}
+    const findingId = {{ current_finding.id }};
+    
+    fetch(`/api/findings/${findingId}/status`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status: status })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Reload the page to show updated status
+            window.location.reload();
+        } else {
+            alert('Error updating status: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error updating status');
+    });
+    {% endif %}
+}
+
+function copyFindingAsMarkdown(button) {
+    {% if current_finding %}
+    const finding = {
+        id: {{ current_finding.id }},
+        title: {{ current_finding.title|tojson }},
+        description: {{ current_finding.description|tojson }},
+        recommendation: {{ (current_finding.recommendation or '')|tojson }},
+        file_path: {{ (current_finding.file_path or '')|tojson }},
+        project: {{ current_finding.project.name|tojson }},
+        severity: {{ current_finding.severity.value|tojson }},
+        status: {{ current_finding.status.value|tojson }},
+        created_at: {{ current_finding.created_at.strftime('%Y-%m-%d %H:%M')|tojson }}
+    };
+    
+    // Build markdown format
+    let markdown = `# ${finding.title}\n\n`;
+    markdown += `**Severity:** ${finding.severity.charAt(0).toUpperCase() + finding.severity.slice(1)}  \n`;
+    markdown += `**Status:** ${finding.status.replace('_', ' ').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}  \n`;
+    markdown += `**Project:** ${finding.project}  \n`;
+    if (finding.file_path) {
+        markdown += `**File:** \`${finding.file_path}\`  \n`;
+    }
+    markdown += `**Created:** ${finding.created_at}  \n`;
+    markdown += `**ID:** ${finding.id}  \n\n`;
+    markdown += `---\n\n`;
+    markdown += `## Description\n\n${finding.description}\n\n`;
+    
+    if (finding.recommendation && finding.recommendation.trim()) {
+        markdown += `## Recommendation\n\n${finding.recommendation}\n\n`;
+    }
+    
+    // Copy to clipboard
+    navigator.clipboard.writeText(markdown).then(function() {
+        // Show success feedback
+        const originalText = button.innerHTML;
+        button.innerHTML = '<i class="bi bi-check-circle me-2"></i>Copied!';
+        button.classList.remove('btn-outline-info');
+        button.classList.add('btn-success');
+        setTimeout(function() {
+            button.innerHTML = originalText;
+            button.classList.remove('btn-success');
+            button.classList.add('btn-outline-info');
+        }, 2000);
+    }).catch(function(err) {
+        console.error('Failed to copy: ', err);
+        alert('Failed to copy to clipboard. Please try manually.');
+    });
+    {% endif %}
+}
+
+// Keyboard navigation
+{% if findings|length > 0 %}
+document.addEventListener('keydown', function(e) {
+    {% if current_index > 0 %}
+    if (e.key === 'ArrowLeft') {
+        const params = new URLSearchParams();
+        params.set('index', {{ current_index - 1 }});
+        {% if selected_severity %}params.set('severity', '{{ selected_severity }}');{% endif %}
+        {% if selected_status %}params.set('status', '{{ selected_status }}');{% endif %}
+        {% if selected_project_id %}params.set('project_id', '{{ selected_project_id }}');{% endif %}
+        {% if selected_file_path %}params.set('file_path', '{{ selected_file_path }}');{% endif %}
+        window.location.href = '{{ url_for("findings.findings_navigate") }}?' + params.toString();
+    }
+    {% endif %}
+    {% if current_index < findings|length - 1 %}
+    if (e.key === 'ArrowRight') {
+        const params = new URLSearchParams();
+        params.set('index', {{ current_index + 1 }});
+        {% if selected_severity %}params.set('severity', '{{ selected_severity }}');{% endif %}
+        {% if selected_status %}params.set('status', '{{ selected_status }}');{% endif %}
+        {% if selected_project_id %}params.set('project_id', '{{ selected_project_id }}');{% endif %}
+        {% if selected_file_path %}params.set('file_path', '{{ selected_file_path }}');{% endif %}
+        window.location.href = '{{ url_for("findings.findings_navigate") }}?' + params.toString();
+    }
+    {% endif %}
+});
+{% endif %}
+</script>
+{% endblock %}

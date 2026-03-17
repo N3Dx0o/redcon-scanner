@@ -1,0 +1,796 @@
+{% extends "base.html" %}
+
+{% block title %}New Project - Security Scanner{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <!-- Header -->
+            <div class="text-center mb-5">
+                <h1 class="h2 mb-3">Create New Project</h1>
+                <p class="text-muted">Set up your project for security analysis in a few simple steps</p>
+            </div>
+
+            <!-- Progress Steps -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <div class="progress-steps">
+                        <div class="step active" data-step="1">
+                            <div class="step-number">1</div>
+                            <div class="step-title">Project Details</div>
+                        </div>
+                        <div class="step" data-step="2">
+                            <div class="step-number">2</div>
+                            <div class="step-title">AI Models</div>
+                        </div>
+                        <div class="step" data-step="3">
+                            <div class="step-number">3</div>
+                            <div class="step-title">Threat Models</div>
+                        </div>
+                        <div class="step" data-step="4">
+                            <div class="step-number">4</div>
+                            <div class="step-title">Review</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <form method="POST" enctype="multipart/form-data" id="onboardingForm" class="needs-validation" novalidate>
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <!-- Step 1: Project Details -->
+                <div class="card step-content" id="step1">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="bi bi-folder me-2"></i>Project Details
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <!-- Project Name -->
+                        <div class="mb-4">
+                            <label for="project_name" class="form-label">Project Name *</label>
+                            <input type="text" class="form-control" id="project_name" name="project_name" required>
+                            <div class="invalid-feedback">Please provide a project name.</div>
+                        </div>
+
+                        <!-- Max Cost -->
+                        <div class="mb-4">
+                            <label for="max_cost" class="form-label">Max Cost (USD)</label>
+                            <input type="number" class="form-control" id="max_cost" name="max_cost" step="0.01" min="0" placeholder="0.00">
+                            <div class="form-text">Maximum cost for AI analysis (leave empty for no limit)</div>
+                        </div>
+
+                        <!-- Input Type Selection -->
+                        <div class="mb-4">
+                            <label class="form-label">Project Source *</label>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="input_type" id="zip_file" value="zip_file" checked>
+                                        <label class="form-check-label" for="zip_file">
+                                            <i class="bi bi-file-zip me-2"></i>Upload ZIP File
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="input_type" id="git_link" value="git_link">
+                                        <label class="form-check-label" for="git_link">
+                                            <i class="bi bi-git me-2"></i>Git Repository
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ZIP File Upload -->
+                        <div class="input-section" id="zip-section">
+                            <label for="zip_file_input" class="form-label">ZIP File *</label>
+                            <div class="upload-area" id="uploadArea">
+                                <div class="text-center">
+                                    <i class="bi bi-cloud-upload display-4 text-muted mb-3"></i>
+                                    <h6>Upload Project ZIP File</h6>
+                                    <p class="text-muted mb-3">Drag and drop your project zip file here, or click to browse</p>
+                                    <input type="file" class="form-control" id="zip_file_input" name="zip_file" accept=".zip" required>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Git URL Input -->
+                        <div class="input-section" id="git-section" style="display: none;">
+                            <label for="git_url" class="form-label">Git Repository URL *</label>
+                            <input type="url" class="form-control" id="git_url" name="git_url" placeholder="https://github.com/user/repo.git">
+                            <div class="form-text">Enter the URL of your Git repository</div>
+                        </div>
+
+                        <!-- Status -->
+                        <div class="mb-4">
+                            <label for="status" class="form-label">Status</label>
+                            <select class="form-select" id="status" name="status">
+                                <option value="active" selected>Active</option>
+                                <option value="inactive">Inactive</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 2: AI Models -->
+                <div class="card step-content" id="step2" style="display: none;">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="bi bi-robot me-2"></i>AI Models
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted mb-4">Select which AI models to use for security analysis</p>
+                        <div class="mb-3">
+                            <label for="ai_models_select" class="form-label">AI Models *</label>
+                            <select class="form-select" id="ai_models_select" name="ai_models" multiple required>
+                                <!-- AI models will be loaded here -->
+                            </select>
+                            <div class="form-text">Select one or more AI models for security analysis</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 3: Threat Models -->
+                <div class="card step-content" id="step3" style="display: none;">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="bi bi-shield-exclamation me-2"></i>Threat Models
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted mb-4">Choose which threat models to apply to your project</p>
+                        <div class="mb-3">
+                            <label for="threat_models_select" class="form-label">Threat Models *</label>
+                            
+                            <!-- Quick Selection Buttons (dynamically generated) -->
+                            <div class="mb-2">
+                                <div class="btn-group flex-wrap" id="threat_models_quick_select" role="group" aria-label="Quick threat model selection">
+                                    <!-- Buttons will be generated dynamically by JavaScript -->
+                                </div>
+                            </div>
+                            
+                            <select class="form-select" id="threat_models_select" name="threat_models" multiple required>
+                                <!-- Threat models will be loaded here -->
+                            </select>
+                            <div class="form-text">Select one or more threat models for security analysis. Use quick selection buttons above for common groups.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 4: Review -->
+                <div class="card step-content" id="step4" style="display: none;">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="bi bi-check-circle me-2"></i>Review & Create
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="review-content">
+                            <!-- Review content will be populated here -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Navigation Buttons -->
+                <div class="card">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <button type="button" id="prevBtn" class="btn btn-outline-secondary" style="display: none;">
+                                <i class="bi bi-arrow-left me-2"></i>Previous
+                            </button>
+                            <div class="ms-auto">
+                                <button type="button" id="nextBtn" class="btn btn-primary">
+                                    Next<i class="bi bi-arrow-right ms-2"></i>
+                                </button>
+                                <button type="submit" id="createBtn" class="btn btn-success" style="display: none;">
+                                    <i class="bi bi-check-circle me-2"></i>Create Project
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+.progress-steps {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 20px 0;
+}
+
+.step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex: 1;
+    position: relative;
+}
+
+.step:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    top: 15px;
+    left: 60%;
+    width: 80%;
+    height: 2px;
+    background: #dee2e6;
+    z-index: 1;
+}
+
+.step.completed:not(:last-child)::after {
+    background: #198754;
+}
+
+.step-number {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: #dee2e6;
+    color: #6c757d;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    margin-bottom: 8px;
+    z-index: 2;
+    position: relative;
+}
+
+.step.active .step-number {
+    background: #0d6efd;
+    color: white;
+}
+
+.step.completed .step-number {
+    background: #198754;
+    color: white;
+}
+
+.step-title {
+    font-size: 12px;
+    text-align: center;
+    color: #6c757d;
+}
+
+.step.active .step-title {
+    color: #0d6efd;
+}
+
+.step.completed .step-title {
+    color: #198754;
+}
+
+.upload-area {
+    border: 2px dashed #dee2e6;
+    border-radius: 8px;
+    padding: 40px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.upload-area:hover,
+.upload-area.dragover {
+    border-color: #0d6efd;
+    background: rgba(13, 110, 253, 0.05);
+}
+
+.input-section {
+    margin-bottom: 1rem;
+}
+
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    let currentStep = 1;
+    const totalSteps = 4;
+    
+    // Load AI models and threat models
+    loadAIModels();
+    loadThreatModels();
+    
+    
+    // Input type toggle
+    document.querySelectorAll('input[name="input_type"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            const zipSection = document.getElementById('zip-section');
+            const gitSection = document.getElementById('git-section');
+            
+            if (this.value === 'zip_file') {
+                zipSection.style.display = 'block';
+                gitSection.style.display = 'none';
+                document.getElementById('zip_file').required = true;
+                document.getElementById('git_url').required = false;
+            } else {
+                zipSection.style.display = 'none';
+                gitSection.style.display = 'block';
+                document.getElementById('zip_file').required = false;
+                document.getElementById('git_url').required = true;
+            }
+        });
+    });
+    
+    // File upload handling
+    const uploadArea = document.getElementById('uploadArea');
+    const fileInput = document.getElementById('zip_file_input');
+    
+    uploadArea.addEventListener('click', () => fileInput.click());
+    
+    uploadArea.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        uploadArea.classList.add('dragover');
+    });
+    
+    uploadArea.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        uploadArea.classList.remove('dragover');
+    });
+    
+    uploadArea.addEventListener('drop', (e) => {
+        e.preventDefault();
+        uploadArea.classList.remove('dragover');
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            fileInput.files = files;
+            // Auto-populate project name
+            const projectNameField = document.getElementById('project_name');
+            if (!projectNameField.value) {
+                const fileName = files[0].name;
+                const nameWithoutExt = fileName.replace('.zip', '');
+                projectNameField.value = nameWithoutExt;
+            }
+        }
+    });
+    
+    fileInput.addEventListener('change', function() {
+        if (this.files.length > 0) {
+            // Auto-populate project name
+            const projectNameField = document.getElementById('project_name');
+            if (!projectNameField.value) {
+                const fileName = this.files[0].name;
+                const nameWithoutExt = fileName.replace('.zip', '');
+                projectNameField.value = nameWithoutExt;
+            }
+        }
+    });
+    
+    // Navigation
+    document.getElementById('nextBtn').addEventListener('click', nextStep);
+    document.getElementById('prevBtn').addEventListener('click', prevStep);
+    
+    function nextStep() {
+        if (validateCurrentStep()) {
+            if (currentStep < totalSteps) {
+                currentStep++;
+                showStep(currentStep);
+            }
+        }
+    }
+    
+    function prevStep() {
+        if (currentStep > 1) {
+            currentStep--;
+            showStep(currentStep);
+        }
+    }
+    
+    function showStep(step) {
+        // Hide all steps
+        document.querySelectorAll('.step-content').forEach(el => {
+            el.style.display = 'none';
+        });
+        
+        // Show current step
+        document.getElementById(`step${step}`).style.display = 'block';
+        
+        // Update progress indicator
+        document.querySelectorAll('.step').forEach((el, index) => {
+            el.classList.toggle('active', index + 1 === step);
+            el.classList.toggle('completed', index + 1 < step);
+        });
+        
+        // Update navigation buttons
+        document.getElementById('prevBtn').style.display = step > 1 ? 'block' : 'none';
+        document.getElementById('nextBtn').style.display = step < totalSteps ? 'block' : 'none';
+        document.getElementById('createBtn').style.display = step === totalSteps ? 'block' : 'none';
+        
+        // Load review content if on last step
+        if (step === totalSteps) {
+            loadReviewContent();
+        }
+    }
+    
+    function validateCurrentStep() {
+        switch (currentStep) {
+            case 1:
+                const inputType = document.querySelector('input[name="input_type"]:checked').value;
+                const projectName = document.getElementById('project_name').value.trim();
+                
+                if (!projectName) {
+                    alert('Please enter a project name');
+                    return false;
+                }
+                
+                if (inputType === 'zip_file') {
+                    const zipFileInput = document.getElementById('zip_file_input');
+                    if (!zipFileInput || !zipFileInput.files[0]) {
+                        alert('Please select a zip file');
+                        return false;
+                    }
+                } else {
+                    const gitUrl = document.getElementById('git_url').value.trim();
+                    if (!gitUrl) {
+                        alert('Please enter a Git URL');
+                        return false;
+                    }
+                }
+                break;
+            case 2:
+                const selectedModels = $('#ai_models_select').val();
+                if (!selectedModels || selectedModels.length === 0) {
+                    alert('Please select at least one AI model');
+                    return false;
+                }
+                break;
+            case 3:
+                const selectedThreats = $('#threat_models_select').val();
+                if (!selectedThreats || selectedThreats.length === 0) {
+                    alert('Please select at least one threat model');
+                    return false;
+                }
+                break;
+        }
+        return true;
+    }
+    
+    function loadAIModels() {
+        fetch('/api/ai-models')
+            .then(response => response.json())
+            .then(data => {
+                const select = document.getElementById('ai_models_select');
+                data.models.forEach(model => {
+                    const option = document.createElement('option');
+                    option.value = model.id;
+                    option.textContent = `${model.vendor}/${model.model_name} (${model.api_key_suffix})`;
+                    select.appendChild(option);
+                });
+                
+                // Initialize Select2
+                $(select).select2({
+                    theme: 'bootstrap-5',
+                    placeholder: 'Select AI models...',
+                    allowClear: true,
+                    width: '100%'
+                });
+            })
+            .catch(error => {
+                console.error('Error loading AI models:', error);
+                alert('Error loading AI models');
+            });
+    }
+    
+    function loadThreatModels() {
+        fetch('/api/threat-models')
+            .then(response => response.json())
+            .then(data => {
+                const select = document.getElementById('threat_models_select');
+                
+                // Clear existing options
+                select.innerHTML = '';
+                
+                // Store tool mappings for quick selection - dynamically based on categories
+                window.threatModelGroups = {
+                    all: []
+                };
+                
+                // Map category names to group keys for button generation
+                const categoryToGroupKey = {
+                    'Blockchain': 'blockchain',
+                    'Programming Languages': 'programming',
+                    'Frameworks': 'frameworks',
+                    'Cryptography': 'cryptography',
+                    'Web Security': 'web',
+                    'Infrastructure': 'infrastructure',
+                    'AI/ML': 'ai_ml',
+                    'IoT/Mobile': 'iot_mobile',
+                    'Network/Data': 'network_data',
+                    'Other': 'other'
+                };
+                
+                // Initialize groups for all categories
+                if (data.categories && data.categories.length > 0) {
+                    data.categories.forEach(category => {
+                        const groupKey = categoryToGroupKey[category] || category.toLowerCase().replace(/[^a-z0-9]/g, '_');
+                        window.threatModelGroups[groupKey] = [];
+                    });
+                }
+                
+                // Always include solidity group if Solidity tools exist
+                window.threatModelGroups.solidity = [];
+                
+                // Use categorized data if available, otherwise fall back to flat list
+                if (data.categorized && Object.keys(data.categorized).length > 0) {
+                    // Sort categories for better UX
+                    const categoryOrder = ['Blockchain', 'Programming Languages', 'Frameworks', 'Cryptography', 'Web Security', 'Infrastructure', 'AI/ML', 'IoT/Mobile', 'Network/Data', 'Other'];
+                    const sortedCategories = Object.keys(data.categorized).sort((a, b) => {
+                        const aIndex = categoryOrder.findIndex(c => a.toLowerCase().includes(c.toLowerCase()));
+                        const bIndex = categoryOrder.findIndex(c => b.toLowerCase().includes(c.toLowerCase()));
+                        if (aIndex === -1 && bIndex === -1) return a.localeCompare(b);
+                        if (aIndex === -1) return 1;
+                        if (bIndex === -1) return -1;
+                        return aIndex - bIndex;
+                    });
+                    
+                    sortedCategories.forEach(category => {
+                        const optgroup = document.createElement('optgroup');
+                        optgroup.label = category;
+                        optgroup.setAttribute('data-category', category.toLowerCase());
+                        
+                        const categoryTools = data.categorized[category];
+                        const groupKey = categoryToGroupKey[category] || category.toLowerCase().replace(/[^a-z0-9]/g, '_');
+                        
+                        categoryTools.forEach(tool => {
+                            const option = document.createElement('option');
+                            option.value = tool.name;
+                            option.textContent = tool.display_name || tool.name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                            optgroup.appendChild(option);
+                            
+                            // Track tools by category group
+                            if (window.threatModelGroups[groupKey]) {
+                                window.threatModelGroups[groupKey].push(tool.name);
+                            }
+                            
+                            // Special: Solidity group - all tools starting with 'solidity_'
+                            const toolName = tool.name.toLowerCase();
+                            if (toolName.startsWith('solidity_')) {
+                                window.threatModelGroups.solidity.push(tool.name);
+                            }
+                            
+                            window.threatModelGroups.all.push(tool.name);
+                        });
+                        
+                        select.appendChild(optgroup);
+                    });
+                } else {
+                    // Fallback to flat list
+                    data.tools.forEach(tool => {
+                        const option = document.createElement('option');
+                        option.value = tool;
+                        option.textContent = tool.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                        select.appendChild(option);
+                        
+                        // Track tools by group for quick selection (fallback)
+                        const toolName = tool.toLowerCase();
+                        if (toolName.startsWith('solidity_')) {
+                            window.threatModelGroups.solidity.push(tool);
+                        }
+                        if (toolName.startsWith('solidity_') || toolName.includes('defi') || toolName.includes('l1_') || toolName.includes('l2_') || toolName.includes('solana') || toolName.includes('substrate') || toolName.includes('near_') || toolName.includes('cosmos') || toolName.includes('avalanche')) {
+                            window.threatModelGroups.blockchain.push(tool);
+                        }
+                        if (toolName.includes('crypto') || toolName.includes('aes_') || toolName.includes('rsa_') || toolName.includes('ecdsa_') || toolName.includes('hash_') || toolName.includes('shamir_') || toolName.includes('mpc_') || toolName.includes('ssl_') || toolName.includes('tls_')) {
+                            window.threatModelGroups.crypto.push(tool);
+                        }
+                        if (toolName.includes('web') || toolName.includes('owasp') || toolName.includes('xss_') || toolName.includes('csrf_') || toolName.includes('sql_') || toolName.includes('api_')) {
+                            window.threatModelGroups.web.push(tool);
+                        }
+                        window.threatModelGroups.all.push(tool);
+                    });
+                }
+                
+                // Initialize Select2
+                $(select).select2({
+                    theme: 'bootstrap-5',
+                    placeholder: 'Select threat models...',
+                    allowClear: true,
+                    width: '100%',
+                    closeOnSelect: false
+                });
+                
+                // Generate quick selection buttons dynamically
+                generateQuickSelectionButtons(data.categories || [], categoryToGroupKey);
+                
+                // Setup quick selection buttons
+                setupQuickSelectionButtons(select);
+            })
+            .catch(error => {
+                console.error('Error loading threat models:', error);
+                alert('Error loading threat models');
+            });
+    }
+    
+    function generateQuickSelectionButtons(categories, categoryToGroupKey) {
+        const buttonContainer = document.getElementById('threat_models_quick_select');
+        if (!buttonContainer) return;
+        
+        // Clear existing buttons
+        buttonContainer.innerHTML = '';
+        
+        // Add "All Solidity" button if Solidity tools exist
+        if (window.threatModelGroups.solidity && window.threatModelGroups.solidity.length > 0) {
+            const solidityBtn = document.createElement('button');
+            solidityBtn.type = 'button';
+            solidityBtn.className = 'btn btn-sm btn-outline-primary';
+            solidityBtn.setAttribute('data-select-group', 'solidity');
+            solidityBtn.innerHTML = '<i class="bi bi-check-all me-1"></i>All Solidity';
+            buttonContainer.appendChild(solidityBtn);
+        }
+        
+        // Generate buttons for each category
+        categories.forEach(category => {
+            const groupKey = categoryToGroupKey[category] || category.toLowerCase().replace(/[^a-z0-9]/g, '_');
+            const tools = window.threatModelGroups[groupKey] || [];
+            
+            // Only create button if category has tools
+            if (tools.length > 0) {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'btn btn-sm btn-outline-primary';
+                btn.setAttribute('data-select-group', groupKey);
+                btn.innerHTML = `<i class="bi bi-check-all me-1"></i>All ${category}`;
+                buttonContainer.appendChild(btn);
+            }
+        });
+        
+        // Add "Select All" and "Clear All" buttons
+        const selectAllBtn = document.createElement('button');
+        selectAllBtn.type = 'button';
+        selectAllBtn.className = 'btn btn-sm btn-outline-secondary';
+        selectAllBtn.setAttribute('data-select-group', 'all');
+        selectAllBtn.innerHTML = '<i class="bi bi-check-all me-1"></i>Select All';
+        buttonContainer.appendChild(selectAllBtn);
+        
+        const clearAllBtn = document.createElement('button');
+        clearAllBtn.type = 'button';
+        clearAllBtn.className = 'btn btn-sm btn-outline-danger';
+        clearAllBtn.setAttribute('data-select-group', 'none');
+        clearAllBtn.innerHTML = '<i class="bi bi-x-circle me-1"></i>Clear All';
+        buttonContainer.appendChild(clearAllBtn);
+    }
+    
+    function setupQuickSelectionButtons(select) {
+        const quickSelectButtons = document.querySelectorAll('[data-select-group]');
+        
+        quickSelectButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const group = this.getAttribute('data-select-group');
+                
+                if (group === 'none') {
+                    // Clear all selections
+                    $(select).val(null).trigger('change');
+                } else if (group === 'all') {
+                    // Select all options
+                    const allValues = Array.from(select.options).map(opt => opt.value);
+                    $(select).val(allValues).trigger('change');
+                } else {
+                    // Select specific group
+                    const groupTools = window.threatModelGroups[group] || [];
+                    if (groupTools.length > 0) {
+                        // Get current selections
+                        const currentValues = $(select).val() || [];
+                        // Add group tools (avoid duplicates)
+                        const newValues = [...new Set([...currentValues, ...groupTools])];
+                        $(select).val(newValues).trigger('change');
+                    }
+                }
+            });
+        });
+    }
+    
+    function loadReviewContent() {
+        const formData = new FormData(document.getElementById('onboardingForm'));
+        const reviewContent = document.getElementById('review-content');
+        
+        let html = '<div class="row">';
+        
+        // Project details
+        html += '<div class="col-md-6 mb-3">';
+        html += '<h6>Project Details</h6>';
+        html += '<ul class="list-unstyled">';
+        html += '<li><strong>Name:</strong> ' + formData.get('project_name') + '</li>';
+        html += '<li><strong>Type:</strong> ' + formData.get('input_type') + '</li>';
+        if (formData.get('input_type') === 'zip_file') {
+            const fileInput = document.getElementById('zip_file_input');
+            const file = fileInput ? fileInput.files[0] : null;
+            html += '<li><strong>File:</strong> ' + (file ? file.name : 'None') + '</li>';
+        } else {
+            html += '<li><strong>Git URL:</strong> ' + formData.get('git_url') + '</li>';
+        }
+        html += '<li><strong>Status:</strong> ' + formData.get('status') + '</li>';
+        html += '<li><strong>Max Cost:</strong> $' + (formData.get('max_cost') || 'No limit') + '</li>';
+        html += '</ul>';
+        html += '</div>';
+        
+        // AI Models
+        html += '<div class="col-md-6 mb-3">';
+        html += '<h6>AI Models</h6>';
+        let selectedModels = [];
+        try {
+            selectedModels = $('#ai_models_select').select2('data') || [];
+        } catch (e) {
+            // Fallback: get selected values from the select element
+            const aiModelsSelect = document.getElementById('ai_models_select');
+            if (aiModelsSelect) {
+                const selectedOptions = Array.from(aiModelsSelect.selectedOptions);
+                selectedModels = selectedOptions.map(option => ({ text: option.text }));
+            }
+        }
+        html += '<ul class="list-unstyled">';
+        selectedModels.forEach(model => {
+            html += '<li><i class="bi bi-check-circle text-success me-2"></i>' + model.text + '</li>';
+        });
+        html += '</ul>';
+        html += '</div>';
+        
+        // Threat Models
+        html += '<div class="col-12 mb-3">';
+        html += '<h6>Threat Models</h6>';
+        let selectedThreats = [];
+        try {
+            selectedThreats = $('#threat_models_select').select2('data') || [];
+        } catch (e) {
+            // Fallback: get selected values from the select element
+            const threatModelsSelect = document.getElementById('threat_models_select');
+            if (threatModelsSelect) {
+                const selectedOptions = Array.from(threatModelsSelect.selectedOptions);
+                selectedThreats = selectedOptions.map(option => ({ text: option.text }));
+            }
+        }
+        html += '<div class="d-flex flex-wrap gap-2">';
+        selectedThreats.forEach(threat => {
+            html += '<span class="badge bg-primary">' + threat.text + '</span>';
+        });
+        html += '</div>';
+        html += '</div>';
+        
+        html += '</div>';
+        reviewContent.innerHTML = html;
+    }
+    
+    // Form submission
+    document.getElementById('onboardingForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const submitBtn = document.getElementById('createBtn');
+        const originalText = submitBtn.innerHTML;
+        
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Creating...';
+        
+        const formData = new FormData(this);
+        
+        fetch('/projects/onboard', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Project created successfully!');
+                window.location.href = '/projects/' + data.project_id + '/edit';
+            } else {
+                alert('Error: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error creating project');
+        })
+        .finally(() => {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalText;
+        });
+    });
+    
+});
+</script>
+{% endblock %}

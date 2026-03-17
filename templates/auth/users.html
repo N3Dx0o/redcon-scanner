@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block title %}User Management — REDCON OFFENCE{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex align-items-center justify-content-between mb-4">
+        <div>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('home.index') }}">Dashboard</a></li>
+                    <li class="breadcrumb-item active">User Management</li>
+                </ol>
+            </nav>
+            <h1 class="mb-0"><i class="bi bi-people me-2" style="color:var(--redcon-primary)"></i>User Management</h1>
+            <p class="text-muted mt-1">Manage dashboard access accounts</p>
+        </div>
+        <a href="{{ url_for('auth.register') }}" class="btn btn-primary">
+            <i class="bi bi-person-plus me-2"></i>Add User
+        </a>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for category, message in messages %}
+        <div class="alert alert-{{ category }} mb-3">
+            <i class="bi bi-info-circle me-2"></i>{{ message }}
+        </div>
+        {% endfor %}
+    {% endwith %}
+
+    <div class="card">
+        <div class="card-header d-flex align-items-center gap-2">
+            <i class="bi bi-people-fill text-redcon"></i>
+            <span>Registered Users ({{ users|length }})</span>
+        </div>
+        <div class="card-body p-0">
+            <table class="table mb-0">
+                <thead>
+                    <tr>
+                        <th>User</th>
+                        <th>Email</th>
+                        <th>Role</th>
+                        <th>Last Login</th>
+                        <th>Created</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users %}
+                    <tr>
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                <div style="width:34px;height:34px;border-radius:50%;background:rgba(201,53,63,0.12);border:1px solid rgba(201,53,63,0.3);display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--redcon-primary);font-size:0.85rem;">
+                                    {{ user.username[0].upper() }}
+                                </div>
+                                <div>
+                                    <div style="font-weight:600;">{{ user.username }}</div>
+                                    {% if user.id == current_user.id %}
+                                    <span style="font-size:0.7rem;color:var(--redcon-primary);">● You</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </td>
+                        <td class="text-muted" style="font-size:0.875rem;">{{ user.email }}</td>
+                        <td>
+                            {% if user.is_admin %}
+                            <span class="badge" style="background:rgba(201,53,63,0.15);color:#fca5a5;border:1px solid rgba(201,53,63,0.4);">
+                                <i class="bi bi-shield-fill me-1"></i>Admin
+                            </span>
+                            {% else %}
+                            <span class="badge" style="background:rgba(145,152,161,0.1);color:#9198a1;border:1px solid #2d333b;">
+                                Analyst
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td class="text-muted" style="font-size:0.8rem;">
+                            {% if user.last_login_at %}
+                                {{ user.last_login_at.strftime('%b %d, %Y %H:%M') }}
+                            {% else %}
+                                <span style="color:var(--redcon-text-muted);">Never</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-muted" style="font-size:0.8rem;">{{ user.created_at.strftime('%b %d, %Y') }}</td>
+                        <td class="text-end">
+                            {% if user.id != current_user.id %}
+                            <form method="POST" action="{{ url_for('auth.delete_user', user_id=user.id) }}"
+                                  onsubmit="return confirm('Delete user {{ user.username }}? This cannot be undone.')">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn btn-outline-danger btn-sm">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

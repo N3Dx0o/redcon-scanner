@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "findings-server": {
+      "command": "python",
+      "args": [
+        "/absolute/path/to/wwwdot/mcp_servers/findings_server.py"
+      ],
+      "env": {
+        "BASE_URL": "http://localhost:5555",
+        "PROJECT_ID": "1"
+      }
+    }
+  }
+}

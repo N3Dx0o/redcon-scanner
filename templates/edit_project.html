@@ -1,0 +1,952 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Project - Security Scanner{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <!-- Main Content -->
+        <div class="col-lg-10 mx-auto">
+            <!-- Header -->
+            <div class="d-flex justify-content-between align-items-center mb-4 mt-3">
+                <div>
+                    <h1 class="h2 mb-1">
+                        <i class="bi bi-pencil-square me-2"></i>Edit Project
+                    </h1>
+                    <p class="text-muted mb-0">{{ project.name }}</p>
+                </div>
+                <div>
+                    <a href="{{ url_for('projects.view_project', project_id=project.id) }}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left me-1"></i>Back to Project
+                    </a>
+                </div>
+            </div>
+
+            <form method="POST" class="needs-validation" novalidate id="editProjectForm">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="row">
+                    <!-- Left Column - Main Settings -->
+                    <div class="col-lg-8">
+                        <!-- Project Information -->
+                        <div class="card shadow-sm mb-4">
+                            <div class="card-header bg-primary text-white">
+                                <h5 class="mb-0">
+                                    <i class="bi bi-info-circle me-2"></i>Project Information
+                                </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                                    <div class="col-md-8 mb-3">
+                                        <label for="name" class="form-label fw-bold">Project Name *</label>
+                                        <input type="text" class="form-control form-control-lg" id="name" name="name" value="{{ project.name }}" required>
+                                <div class="invalid-feedback">Please provide a project name.</div>
+                            </div>
+                                    <div class="col-md-4 mb-3">
+                                        <label for="status" class="form-label fw-bold">Status</label>
+                                        <select class="form-select form-select-lg" id="status" name="status">
+                                    <option value="active" {% if project.status.value == 'active' %}selected{% endif %}>Active</option>
+                                    <option value="inactive" {% if project.status.value == 'inactive' %}selected{% endif %}>Inactive</option>
+                                    <option value="archived" {% if project.status.value == 'archived' %}selected{% endif %}>Archived</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                        <!-- Configuration -->
+                        <div class="card shadow-sm mb-4">
+                            <div class="card-header bg-success text-white">
+                                <h5 class="mb-0">
+                                    <i class="bi bi-gear me-2"></i>Configuration
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row mb-4">
+                                    <div class="col-md-6 mb-3">
+                                        <label for="max_cost" class="form-label fw-bold">
+                                            <i class="bi bi-currency-dollar me-1"></i>Maximum Cost (USD)
+                                        </label>
+                                        <input type="number" class="form-control" id="max_cost" name="max_cost" 
+                                               value="{{ project.max_cost or '' }}" step="0.01" min="0" placeholder="0.00">
+                                        <div class="form-text">Set a budget limit for AI analysis</div>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label for="cost" class="form-label fw-bold">
+                                            <i class="bi bi-cash-stack me-1"></i>Current Cost (USD)
+                                        </label>
+                                        <input type="number" class="form-control bg-body-secondary" id="cost" name="cost" 
+                                               value="{{ project.cost or '0.00' }}" step="0.01" min="0" readonly>
+                                        <div class="form-text">Total cost spent so far</div>
+                            </div>
+                        </div>
+                        
+                                <hr class="my-4">
+
+                                <!-- Directory Filtering -->
+                                <div class="mb-4">
+                                    <h6 class="fw-bold mb-3">
+                                        <i class="bi bi-folder2 me-2"></i>Directory Filtering
+                                    </h6>
+                                    <div class="alert alert-info">
+                                        <i class="bi bi-info-circle me-2"></i>
+                                        <strong>Note:</strong> Use <strong>Included Directories</strong> to specify only directories to scan, or <strong>Excluded Directories</strong> to skip specific directories. Included directories take precedence over excluded directories.
+                        </div>
+
+                                    <!-- Included Directories -->
+                                    <div class="mb-4">
+                                        <label class="form-label fw-bold">
+                                            <i class="bi bi-folder-check me-1 text-success"></i>Included Directories
+                                        </label>
+                                        <div id="included_dirs_loading" class="text-center py-3" style="display: none;">
+                                            <div class="spinner-border spinner-border-sm me-2"></div>
+                                            Loading project directories...
+                        </div>
+                                        <div id="included_dirs_tree_container" style="display: none;">
+                                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                                <small class="text-muted">Select directories to include in analysis (only these will be scanned)</small>
+                                                <div>
+                                                    <button type="button" class="btn btn-sm btn-outline-success" id="expandIncludedBtn">
+                                                        <i class="bi bi-chevron-down me-1"></i>Expand All
+                                                    </button>
+                                                    <button type="button" class="btn btn-sm btn-outline-secondary" id="collapseIncludedBtn">
+                                                        <i class="bi bi-chevron-up me-1"></i>Collapse All
+                                                    </button>
+                    </div>
+                </div>
+                                            <div id="included_directory_tree" class="directory-tree border rounded p-3" style="max-height: 300px; overflow-y: auto; background-color: #f8f9fa;">
+                                                <!-- Tree will be rendered here -->
+                    </div>
+                                            <input type="hidden" id="included_dirs_hidden" name="included_dirs">
+                            </div>
+                                        <div class="form-text">If specified, only these directories will be scanned (excluded directories will be ignored)</div>
+                        </div>
+                        
+                                    <!-- Excluded Directories -->
+                        <div class="mb-3">
+                                        <label class="form-label fw-bold">
+                                            <i class="bi bi-folder-x me-1 text-danger"></i>Excluded Directories
+                                        </label>
+                            <div id="excluded_dirs_loading" class="text-center py-3" style="display: none;">
+                                <div class="spinner-border spinner-border-sm me-2"></div>
+                                Loading project directories...
+                            </div>
+                            <div id="excluded_dirs_tree_container" style="display: none;">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <small class="text-muted">Select directories to exclude from analysis</small>
+                                    <div>
+                                                    <button type="button" class="btn btn-sm btn-outline-secondary" id="expandExcludedBtn">
+                                            <i class="bi bi-chevron-down me-1"></i>Expand All
+                                        </button>
+                                                    <button type="button" class="btn btn-sm btn-outline-secondary" id="collapseExcludedBtn">
+                                            <i class="bi bi-chevron-up me-1"></i>Collapse All
+                                        </button>
+                                    </div>
+                                </div>
+                                            <div id="excluded_directory_tree" class="directory-tree border rounded p-3" style="max-height: 300px; overflow-y: auto; background-color: #f8f9fa;">
+                                    <!-- Tree will be rendered here -->
+                                </div>
+                                <input type="hidden" id="excluded_dirs_hidden" name="excluded_dirs">
+                            </div>
+                                        <div class="form-text">These directories will be skipped during analysis (unless included directories are specified)</div>
+                                    </div>
+                        </div>
+                        
+                                <hr class="my-4">
+
+                                <!-- AI Models -->
+                        <div class="mb-3">
+                                    <label for="ai_models_select" class="form-label fw-bold">
+                                        <i class="bi bi-robot me-1"></i>AI Models
+                                    </label>
+                            <select class="form-select" id="ai_models_select" name="ai_models" multiple>
+                                <!-- AI models will be loaded here -->
+                            </select>
+                            <div class="form-text">Select one or more AI models for security analysis</div>
+                        </div>
+                        
+                                <!-- Threat Models -->
+                        <div class="mb-3">
+                                    <label for="threat_models_select" class="form-label fw-bold">
+                                        <i class="bi bi-shield-exclamation me-1"></i>Threat Models
+                                    </label>
+                            
+                            <!-- Quick Selection Buttons (dynamically generated) -->
+                            <div class="mb-2">
+                                <div class="btn-group flex-wrap" id="threat_models_quick_select" role="group" aria-label="Quick threat model selection">
+                                    <!-- Buttons will be generated dynamically by JavaScript -->
+                                </div>
+                            </div>
+                            
+                            <select class="form-select" id="threat_models_select" name="threat_models" multiple>
+                                <!-- Threat models will be loaded here -->
+                            </select>
+                            <div class="form-text">Select one or more threat models for security analysis. Use quick selection buttons above for common groups.</div>
+                        </div>
+                    </div>
+                </div>
+                    </div>
+
+                    <!-- Right Column - Sidebar -->
+                    <div class="col-lg-4">
+                        <!-- Project Source -->
+                        <div class="card shadow-sm mb-4">
+                            <div class="card-header bg-info text-white">
+                                <h6 class="mb-0">
+                                    <i class="bi bi-folder me-2"></i>Project Source
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <strong>Input Type:</strong>
+                                    <span class="badge bg-primary ms-2">{{ project.input_type.value.replace('_', ' ').title() }}</span>
+                                </div>
+                                <div class="mb-3">
+                                    <strong>Base Path:</strong>
+                                    <code class="d-block mt-1 small">{{ project.base_path }}</code>
+                                </div>
+                                {% if project.git_link %}
+                                <div class="mb-3">
+                                    <strong>Git Repository:</strong>
+                                    <a href="{{ project.git_link }}" target="_blank" class="d-block mt-1 small">
+                                        <i class="bi bi-git me-1"></i>{{ project.git_link }}
+                                    </a>
+                                </div>
+                                {% endif %}
+                                {% if project.zip_file_path %}
+                                <div class="mb-3">
+                                    <strong>ZIP File:</strong>
+                                    <code class="d-block mt-1 small">{{ project.zip_file_path.split('/')[-1] }}</code>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <!-- Git Branch Selection (if git repository) -->
+                        {% if git_info %}
+                        <div class="card shadow-sm mb-4">
+                            <div class="card-header bg-success text-white">
+                                <h6 class="mb-0">
+                                    <i class="bi bi-git me-2"></i>Git Configuration
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <strong>Current Branch:</strong>
+                                    <span class="badge bg-primary ms-2">{{ git_info.current_branch }}</span>
+                                    {% if git_info.is_dirty %}
+                                    <span class="badge bg-warning ms-1" title="Repository has uncommitted changes">
+                                        <i class="bi bi-exclamation-circle"></i> Dirty
+                                    </span>
+                                    {% endif %}
+                                </div>
+                                {% if git_info.commit_hash_short %}
+                                <div class="mb-3">
+                                    <strong>Latest Commit:</strong>
+                                    <code class="text-info ms-2">{{ git_info.commit_hash_short }}</code>
+                                </div>
+                                {% endif %}
+                                
+                                {% if git_info.branches or git_info.remote_branches %}
+                                <hr class="my-3">
+                                <div class="mb-3">
+                                    <label for="git_branch" class="form-label fw-bold">
+                                        <i class="bi bi-diagram-3 me-1"></i>Switch Branch
+                                    </label>
+                                    <select class="form-select" id="git_branch" name="git_branch">
+                                        <option value="">Keep current branch ({{ git_info.current_branch }})</option>
+                                        {% if git_info.branches %}
+                                        <optgroup label="Local Branches">
+                                            {% for branch in git_info.branches %}
+                                            <option value="{{ branch }}" {% if branch == git_info.current_branch %}selected{% endif %}>
+                                                {{ branch }}{% if branch == git_info.current_branch %} (current){% endif %}
+                                            </option>
+                                            {% endfor %}
+                                        </optgroup>
+                                        {% endif %}
+                                        {% if git_info.remote_branches %}
+                                        <optgroup label="Remote Branches">
+                                            {% for branch in git_info.remote_branches %}
+                                            {% if branch not in git_info.branches %}
+                                            <option value="{{ branch }}">{{ branch }} (remote)</option>
+                                            {% endif %}
+                                            {% endfor %}
+                                        </optgroup>
+                                        {% endif %}
+                                    </select>
+                                    <div class="form-text">
+                                        <i class="bi bi-info-circle me-1"></i>Switching branches will checkout the selected branch and pull the latest changes.
+                                        {% if git_info.is_dirty %}
+                                        <br>
+                                        <span class="text-warning">
+                                            <i class="bi bi-exclamation-triangle me-1"></i><strong>Warning:</strong> You have uncommitted changes. Branch switch may fail.
+                                        </span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                {% endif %}
+                                
+                                {% if git_info.total_commits %}
+                                <div class="mb-0">
+                                    <small class="text-muted">
+                                        <i class="bi bi-list-ol me-1"></i>{{ git_info.total_commits }} total commit(s)
+                                    </small>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        <!-- Timestamps -->
+                        <div class="card shadow-sm mb-4">
+                            <div class="card-header bg-secondary text-white">
+                                <h6 class="mb-0">
+                                    <i class="bi bi-clock me-2"></i>Timestamps
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-2">
+                                    <small class="text-muted d-block">Created</small>
+                                    <strong>{{ project.created_at.strftime('%Y-%m-%d %H:%M') }}</strong>
+                                </div>
+                                <div class="mb-2">
+                                    <small class="text-muted d-block">Updated</small>
+                                    <strong>{{ project.updated_at.strftime('%Y-%m-%d %H:%M') }}</strong>
+                                </div>
+                        {% if project.last_scanned_at %}
+                                <div class="mb-2">
+                                    <small class="text-muted d-block">Last Scanned</small>
+                                    <strong>{{ project.last_scanned_at.strftime('%Y-%m-%d %H:%M') }}</strong>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                        <!-- Action Buttons -->
+                        <div class="card shadow-sm">
+                    <div class="card-body">
+                                <div class="d-grid gap-2">
+                                    <button type="submit" class="btn btn-primary btn-lg">
+                                        <i class="bi bi-save me-2"></i>Save Changes
+                                    </button>
+                            <a href="{{ url_for('projects.view_project', project_id=project.id) }}" class="btn btn-outline-secondary">
+                                        <i class="bi bi-x-circle me-2"></i>Cancel
+                            </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+.directory-tree {
+    font-family: 'Courier New', monospace;
+    font-size: 0.9rem;
+}
+
+.directory-item {
+    display: flex;
+    align-items: center;
+    padding: 0.25rem 0;
+    margin: 0.1rem 0;
+}
+
+.directory-item:hover {
+    background-color: var(--bs-gray-100, #e9ecef);
+    border-radius: 0.25rem;
+}
+
+[data-bs-theme="dark"] .directory-item:hover {
+    background-color: var(--bs-gray-800, #343a40);
+}
+
+.directory-label {
+    margin-left: 0.5rem;
+    cursor: pointer;
+    flex: 1;
+    color: inherit;
+}
+
+.dir-checkbox {
+    cursor: pointer;
+    margin-right: 0.5rem;
+}
+
+.tree-toggle {
+    background: none;
+    border: none;
+    padding: 0.25rem;
+    cursor: pointer;
+    color: var(--bs-secondary, #6c757d);
+    margin-right: 0.25rem;
+}
+
+.tree-toggle:hover {
+    color: var(--bs-primary, #0d6efd);
+}
+
+.tree-spacer {
+    display: inline-block;
+    width: 16px;
+}
+
+.directory-children {
+    margin-left: 1.5rem;
+    border-left: 2px solid var(--bs-border-color, #dee2e6);
+    padding-left: 0.5rem;
+}
+
+[data-bs-theme="dark"] .directory-children {
+    border-left-color: var(--bs-gray-700, #495057);
+}
+
+.directory-children.collapsed {
+    display: none;
+}
+
+.card-header {
+    font-weight: 600;
+}
+
+/* Dark mode adjustments for directory tree containers */
+[data-bs-theme="dark"] #included_directory_tree,
+[data-bs-theme="dark"] #excluded_directory_tree {
+    background-color: var(--bs-dark, #212529) !important;
+    border-color: var(--bs-gray-700, #495057) !important;
+    color: var(--bs-light, #f8f9fa);
+}
+
+#included_directory_tree,
+#excluded_directory_tree {
+    background-color: var(--bs-gray-50, #f8f9fa);
+    border-color: var(--bs-border-color, #dee2e6);
+}
+
+/* Quick selection buttons styling */
+.btn-group.flex-wrap {
+    gap: 0.25rem;
+}
+
+.btn-group.flex-wrap .btn {
+    margin-bottom: 0.25rem;
+    white-space: nowrap;
+}
+
+/* Select2 optgroup styling */
+.select2-results__group {
+    font-weight: 600;
+    color: var(--bs-primary, #0d6efd);
+    padding: 0.5rem 0.75rem;
+    background-color: var(--bs-gray-100, #f8f9fa);
+}
+
+[data-bs-theme="dark"] .select2-results__group {
+    background-color: var(--bs-gray-800, #343a40);
+    color: var(--bs-primary, #0d6efd);
+}
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Load AI models, threat models, and directories
+    loadAIModels();
+    loadThreatModels();
+    loadDirectories();
+    
+    // Initialize Select2 for git branch selector
+    initializeGitBranchSelect();
+    
+    function loadAIModels() {
+        fetch('/api/ai-models')
+            .then(response => response.json())
+            .then(data => {
+                const select = document.getElementById('ai_models_select');
+                const currentModels = {{ project.ai_models | map(attribute='id') | list | tojson }};
+                
+                data.models.forEach(model => {
+                    const option = document.createElement('option');
+                    option.value = model.id;
+                    option.textContent = `${model.vendor}/${model.model_name} (${model.api_key_suffix})`;
+                    if (currentModels.includes(model.id)) {
+                        option.selected = true;
+                    }
+                    select.appendChild(option);
+                });
+                
+                $(select).select2({
+                    theme: 'bootstrap-5',
+                    placeholder: 'Select AI models...',
+                    allowClear: true,
+                    width: '100%'
+                });
+            })
+            .catch(error => {
+                console.error('Error loading AI models:', error);
+                document.getElementById('ai_models_select').innerHTML = '<option>Error loading AI models</option>';
+            });
+    }
+    
+    // Initialize Select2 for git branch selector
+    function initializeGitBranchSelect() {
+        const branchSelect = document.getElementById('git_branch');
+        if (branchSelect) {
+            $(branchSelect).select2({
+                theme: 'bootstrap-5',
+                placeholder: 'Select a branch to switch to...',
+                allowClear: false,
+                width: '100%'
+            });
+        }
+    }
+    
+    function loadThreatModels() {
+        fetch('/api/threat-models')
+            .then(response => response.json())
+            .then(data => {
+                const select = document.getElementById('threat_models_select');
+                const currentThreats = {{ project.threat_models | tojson }};
+                
+                // Clear existing options
+                select.innerHTML = '';
+                
+                // Store tool mappings for quick selection - dynamically based on categories
+                window.threatModelGroups = {
+                    all: []
+                };
+                
+                // Map category names to group keys for button generation
+                const categoryToGroupKey = {
+                    'Blockchain': 'blockchain',
+                    'Programming Languages': 'programming',
+                    'Frameworks': 'frameworks',
+                    'Cryptography': 'cryptography',
+                    'Web Security': 'web',
+                    'Infrastructure': 'infrastructure',
+                    'AI/ML': 'ai_ml',
+                    'IoT/Mobile': 'iot_mobile',
+                    'Network/Data': 'network_data',
+                    'Other': 'other'
+                };
+                
+                // Initialize groups for all categories
+                if (data.categories && data.categories.length > 0) {
+                    data.categories.forEach(category => {
+                        const groupKey = categoryToGroupKey[category] || category.toLowerCase().replace(/[^a-z0-9]/g, '_');
+                        window.threatModelGroups[groupKey] = [];
+                    });
+                }
+                
+                // Always include solidity group if Solidity tools exist
+                window.threatModelGroups.solidity = [];
+                
+                // Use categorized data if available, otherwise fall back to flat list
+                if (data.categorized && Object.keys(data.categorized).length > 0) {
+                    // Sort categories for better UX
+                    const categoryOrder = ['Blockchain', 'Programming Languages', 'Frameworks', 'Cryptography', 'Web Security', 'Infrastructure', 'AI/ML', 'IoT/Mobile', 'Network/Data', 'Other'];
+                    const sortedCategories = Object.keys(data.categorized).sort((a, b) => {
+                        const aIndex = categoryOrder.findIndex(c => a.toLowerCase().includes(c.toLowerCase()));
+                        const bIndex = categoryOrder.findIndex(c => b.toLowerCase().includes(c.toLowerCase()));
+                        if (aIndex === -1 && bIndex === -1) return a.localeCompare(b);
+                        if (aIndex === -1) return 1;
+                        if (bIndex === -1) return -1;
+                        return aIndex - bIndex;
+                    });
+                    
+                    sortedCategories.forEach(category => {
+                        const optgroup = document.createElement('optgroup');
+                        optgroup.label = category;
+                        optgroup.setAttribute('data-category', category.toLowerCase());
+                        
+                        const categoryTools = data.categorized[category];
+                        const groupKey = categoryToGroupKey[category] || category.toLowerCase().replace(/[^a-z0-9]/g, '_');
+                        
+                        categoryTools.forEach(tool => {
+                            const option = document.createElement('option');
+                            option.value = tool.name;
+                            option.textContent = tool.display_name || tool.name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                            if (currentThreats.includes(tool.name)) {
+                                option.selected = true;
+                            }
+                            optgroup.appendChild(option);
+                            
+                            // Track tools by category group
+                            if (window.threatModelGroups[groupKey]) {
+                                window.threatModelGroups[groupKey].push(tool.name);
+                            }
+                            
+                            // Special: Solidity group - all tools starting with 'solidity_'
+                            const toolName = tool.name.toLowerCase();
+                            if (toolName.startsWith('solidity_')) {
+                                window.threatModelGroups.solidity.push(tool.name);
+                            }
+                            
+                            window.threatModelGroups.all.push(tool.name);
+                        });
+                        
+                        select.appendChild(optgroup);
+                    });
+                } else {
+                    // Fallback to flat list
+                    data.tools.forEach(tool => {
+                        const option = document.createElement('option');
+                        option.value = tool;
+                        option.textContent = tool.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                        if (currentThreats.includes(tool)) {
+                            option.selected = true;
+                        }
+                        select.appendChild(option);
+                        
+                        // Track tools by group for quick selection (fallback)
+                        const toolName = tool.toLowerCase();
+                        if (toolName.startsWith('solidity_')) {
+                            window.threatModelGroups.solidity.push(tool);
+                        }
+                        if (toolName.startsWith('solidity_') || toolName.includes('defi') || toolName.includes('l1_') || toolName.includes('l2_') || toolName.includes('solana') || toolName.includes('substrate') || toolName.includes('near_') || toolName.includes('cosmos') || toolName.includes('avalanche')) {
+                            window.threatModelGroups.blockchain.push(tool);
+                        }
+                        if (toolName.includes('crypto') || toolName.includes('aes_') || toolName.includes('rsa_') || toolName.includes('ecdsa_') || toolName.includes('hash_') || toolName.includes('shamir_') || toolName.includes('mpc_') || toolName.includes('ssl_') || toolName.includes('tls_')) {
+                            window.threatModelGroups.crypto.push(tool);
+                        }
+                        if (toolName.includes('web') || toolName.includes('owasp') || toolName.includes('xss_') || toolName.includes('csrf_') || toolName.includes('sql_') || toolName.includes('api_')) {
+                            window.threatModelGroups.web.push(tool);
+                        }
+                        window.threatModelGroups.all.push(tool);
+                    });
+                }
+                
+                $(select).select2({
+                    theme: 'bootstrap-5',
+                    placeholder: 'Select threat models...',
+                    allowClear: true,
+                    width: '100%',
+                    closeOnSelect: false
+                });
+                
+                // Generate quick selection buttons dynamically
+                generateQuickSelectionButtons(data.categories || [], categoryToGroupKey);
+                
+                // Setup quick selection buttons
+                setupQuickSelectionButtons(select);
+            })
+            .catch(error => {
+                console.error('Error loading threat models:', error);
+                document.getElementById('threat_models_select').innerHTML = '<option>Error loading threat models</option>';
+            });
+    }
+    
+    function generateQuickSelectionButtons(categories, categoryToGroupKey) {
+        const buttonContainer = document.getElementById('threat_models_quick_select');
+        if (!buttonContainer) return;
+        
+        // Clear existing buttons
+        buttonContainer.innerHTML = '';
+        
+        // Add "All Solidity" button if Solidity tools exist
+        if (window.threatModelGroups.solidity && window.threatModelGroups.solidity.length > 0) {
+            const solidityBtn = document.createElement('button');
+            solidityBtn.type = 'button';
+            solidityBtn.className = 'btn btn-sm btn-outline-primary';
+            solidityBtn.setAttribute('data-select-group', 'solidity');
+            solidityBtn.innerHTML = '<i class="bi bi-check-all me-1"></i>All Solidity';
+            buttonContainer.appendChild(solidityBtn);
+        }
+        
+        // Generate buttons for each category
+        categories.forEach(category => {
+            const groupKey = categoryToGroupKey[category] || category.toLowerCase().replace(/[^a-z0-9]/g, '_');
+            const tools = window.threatModelGroups[groupKey] || [];
+            
+            // Only create button if category has tools
+            if (tools.length > 0) {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'btn btn-sm btn-outline-primary';
+                btn.setAttribute('data-select-group', groupKey);
+                btn.innerHTML = `<i class="bi bi-check-all me-1"></i>All ${category}`;
+                buttonContainer.appendChild(btn);
+            }
+        });
+        
+        // Add "Select All" and "Clear All" buttons
+        const selectAllBtn = document.createElement('button');
+        selectAllBtn.type = 'button';
+        selectAllBtn.className = 'btn btn-sm btn-outline-secondary';
+        selectAllBtn.setAttribute('data-select-group', 'all');
+        selectAllBtn.innerHTML = '<i class="bi bi-check-all me-1"></i>Select All';
+        buttonContainer.appendChild(selectAllBtn);
+        
+        const clearAllBtn = document.createElement('button');
+        clearAllBtn.type = 'button';
+        clearAllBtn.className = 'btn btn-sm btn-outline-danger';
+        clearAllBtn.setAttribute('data-select-group', 'none');
+        clearAllBtn.innerHTML = '<i class="bi bi-x-circle me-1"></i>Clear All';
+        buttonContainer.appendChild(clearAllBtn);
+    }
+    
+    function setupQuickSelectionButtons(select) {
+        const quickSelectButtons = document.querySelectorAll('[data-select-group]');
+        
+        quickSelectButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const group = this.getAttribute('data-select-group');
+                const select2 = $(select).data('select2');
+                
+                if (group === 'none') {
+                    // Clear all selections
+                    $(select).val(null).trigger('change');
+                } else if (group === 'all') {
+                    // Select all options
+                    const allValues = Array.from(select.options).map(opt => opt.value);
+                    $(select).val(allValues).trigger('change');
+                } else {
+                    // Select specific group
+                    const groupTools = window.threatModelGroups[group] || [];
+                    if (groupTools.length > 0) {
+                        // Get current selections
+                        const currentValues = $(select).val() || [];
+                        // Add group tools (avoid duplicates)
+                        const newValues = [...new Set([...currentValues, ...groupTools])];
+                        $(select).val(newValues).trigger('change');
+                    }
+                }
+            });
+        });
+    }
+    
+    function loadDirectories() {
+        const projectPath = document.querySelector('code').textContent;
+        const currentExcludedDirs = {{ project.excluded_dirs | tojson if project.excluded_dirs else [] | tojson }};
+        const currentIncludedDirs = {{ project.included_dirs | tojson if project.included_dirs else [] | tojson }};
+        
+        // Ensure they are arrays
+        const excludedDirs = Array.isArray(currentExcludedDirs) ? currentExcludedDirs : [];
+        const includedDirs = Array.isArray(currentIncludedDirs) ? currentIncludedDirs : [];
+        
+        // Initialize hidden inputs immediately with current values
+        const excludedHiddenInput = document.getElementById('excluded_dirs_hidden');
+        const includedHiddenInput = document.getElementById('included_dirs_hidden');
+        
+        if (excludedHiddenInput) {
+            if (excludedDirs && excludedDirs.length > 0) {
+                excludedHiddenInput.value = excludedDirs.join(',');
+            } else {
+                excludedHiddenInput.value = '';
+            }
+        }
+        
+        if (includedHiddenInput) {
+            if (includedDirs && includedDirs.length > 0) {
+                includedHiddenInput.value = includedDirs.join(',');
+            } else {
+                includedHiddenInput.value = '';
+            }
+        }
+        
+        // Show loading for both
+        document.getElementById('excluded_dirs_loading').style.display = 'block';
+        document.getElementById('included_dirs_loading').style.display = 'block';
+        
+        fetch('/api/project-directories', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ project_path: projectPath })
+        })
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('excluded_dirs_loading').style.display = 'none';
+            document.getElementById('included_dirs_loading').style.display = 'none';
+            
+            if (data.success && data.tree) {
+                // Render excluded directories tree
+                renderDirectoryTree(data.tree, document.getElementById('excluded_directory_tree'), excludedDirs, 'excluded');
+                document.getElementById('excluded_dirs_tree_container').style.display = 'block';
+                
+                // Render included directories tree
+                renderDirectoryTree(data.tree, document.getElementById('included_directory_tree'), includedDirs, 'included');
+                document.getElementById('included_dirs_tree_container').style.display = 'block';
+                
+                // Ensure hidden inputs are set after rendering
+                if (excludedHiddenInput && excludedDirs && excludedDirs.length > 0) {
+                    excludedHiddenInput.value = excludedDirs.join(',');
+                }
+                if (includedHiddenInput && includedDirs && includedDirs.length > 0) {
+                    includedHiddenInput.value = includedDirs.join(',');
+                }
+            } else {
+                document.getElementById('excluded_directory_tree').innerHTML = '<p class="text-muted">No directories found</p>';
+                document.getElementById('included_directory_tree').innerHTML = '<p class="text-muted">No directories found</p>';
+                document.getElementById('excluded_dirs_tree_container').style.display = 'block';
+                document.getElementById('included_dirs_tree_container').style.display = 'block';
+            }
+        })
+        .catch(error => {
+            console.error('Error loading directories:', error);
+            document.getElementById('excluded_dirs_loading').style.display = 'none';
+            document.getElementById('included_dirs_loading').style.display = 'none';
+            document.getElementById('excluded_directory_tree').innerHTML = '<p class="text-danger">Error loading directories</p>';
+            document.getElementById('included_directory_tree').innerHTML = '<p class="text-danger">Error loading directories</p>';
+            document.getElementById('excluded_dirs_tree_container').style.display = 'block';
+            document.getElementById('included_dirs_tree_container').style.display = 'block';
+        });
+    }
+    
+    function renderDirectoryTree(node, container, selectedPaths, type, depth = 0) {
+        const item = document.createElement('div');
+        item.className = 'directory-item';
+        item.setAttribute('data-path', node.path);
+        
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.className = 'form-check-input dir-checkbox';
+        checkbox.value = node.path;
+        checkbox.id = `${type}-dir-${node.path.replace(/[^a-zA-Z0-9]/g, '_')}`;
+        
+        if (selectedPaths.includes(node.path)) {
+            checkbox.checked = true;
+        }
+        
+        const label = document.createElement('label');
+        label.className = 'directory-label';
+        label.htmlFor = checkbox.id;
+        label.innerHTML = `<i class="bi bi-folder me-1"></i>${node.name}`;
+        
+        const toggleBtn = document.createElement('button');
+        toggleBtn.className = 'tree-toggle';
+        toggleBtn.type = 'button';
+        toggleBtn.innerHTML = node.children && node.children.length > 0 ? '<i class="bi bi-chevron-right"></i>' : '<span class="tree-spacer"></span>';
+        
+        toggleBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            e.preventDefault();
+            let sibling = item.nextElementSibling;
+            while (sibling && !sibling.classList.contains('directory-children')) {
+                sibling = sibling.nextElementSibling;
+            }
+            if (sibling && sibling.classList.contains('directory-children')) {
+                const isExpanded = !sibling.classList.contains('collapsed');
+                sibling.classList.toggle('collapsed');
+                toggleBtn.innerHTML = isExpanded 
+                    ? '<i class="bi bi-chevron-right"></i>' 
+                    : '<i class="bi bi-chevron-down"></i>';
+            }
+        });
+        
+        checkbox.addEventListener('change', function(e) {
+            e.stopPropagation();
+            const isChecked = checkbox.checked;
+            const currentPath = checkbox.value;
+            
+            let sibling = item.nextElementSibling;
+            while (sibling && !sibling.classList.contains('directory-children')) {
+                sibling = sibling.nextElementSibling;
+            }
+            
+            if (sibling && sibling.classList.contains('directory-children')) {
+                const childCheckboxes = sibling.querySelectorAll('.dir-checkbox');
+                childCheckboxes.forEach(childCheckbox => {
+                    childCheckbox.checked = isChecked;
+                    childCheckbox.dispatchEvent(new Event('change'));
+                });
+            }
+            
+            setTimeout(() => {
+                updateHiddenInput(type);
+            }, 50);
+        });
+        
+        item.appendChild(toggleBtn);
+        item.appendChild(checkbox);
+        item.appendChild(label);
+        container.appendChild(item);
+        
+        if (node.children && node.children.length > 0) {
+            const childrenContainer = document.createElement('div');
+            childrenContainer.className = 'directory-children collapsed';
+            
+            node.children.forEach(child => {
+                renderDirectoryTree(child, childrenContainer, selectedPaths, type, depth + 1);
+            });
+            
+            container.appendChild(childrenContainer);
+        }
+    }
+    
+    function updateHiddenInput(type) {
+        const checkboxes = document.querySelectorAll(`#${type}_directory_tree .dir-checkbox:checked`);
+        const selectedPaths = Array.from(checkboxes).map(cb => cb.value);
+        const hiddenInput = document.getElementById(`${type}_dirs_hidden`);
+        if (hiddenInput) {
+            hiddenInput.value = selectedPaths.join(',');
+        }
+    }
+    
+    // Expand/Collapse handlers
+    setTimeout(() => {
+        // Included directories handlers
+        const expandIncludedBtn = document.getElementById('expandIncludedBtn');
+        const collapseIncludedBtn = document.getElementById('collapseIncludedBtn');
+        
+        if (expandIncludedBtn) {
+            expandIncludedBtn.addEventListener('click', function() {
+                document.querySelectorAll('#included_directory_tree .directory-children').forEach(container => {
+                    container.classList.remove('collapsed');
+                });
+                document.querySelectorAll('#included_directory_tree .tree-toggle').forEach(btn => {
+                    if (btn.innerHTML.includes('chevron-right')) {
+                        btn.innerHTML = '<i class="bi bi-chevron-down"></i>';
+                    }
+                });
+            });
+        }
+        
+        if (collapseIncludedBtn) {
+            collapseIncludedBtn.addEventListener('click', function() {
+                document.querySelectorAll('#included_directory_tree .directory-children').forEach(container => {
+                    container.classList.add('collapsed');
+                });
+                document.querySelectorAll('#included_directory_tree .tree-toggle').forEach(btn => {
+                    if (btn.innerHTML.includes('chevron-down')) {
+                        btn.innerHTML = '<i class="bi bi-chevron-right"></i>';
+                    }
+                });
+            });
+        }
+        
+        // Excluded directories handlers
+        const expandExcludedBtn = document.getElementById('expandExcludedBtn');
+        const collapseExcludedBtn = document.getElementById('collapseExcludedBtn');
+        
+        if (expandExcludedBtn) {
+            expandExcludedBtn.addEventListener('click', function() {
+                document.querySelectorAll('#excluded_directory_tree .directory-children').forEach(container => {
+                    container.classList.remove('collapsed');
+                });
+                document.querySelectorAll('#excluded_directory_tree .tree-toggle').forEach(btn => {
+                    if (btn.innerHTML.includes('chevron-right')) {
+                        btn.innerHTML = '<i class="bi bi-chevron-down"></i>';
+                    }
+                });
+            });
+        }
+        
+        if (collapseExcludedBtn) {
+            collapseExcludedBtn.addEventListener('click', function() {
+                document.querySelectorAll('#excluded_directory_tree .directory-children').forEach(container => {
+                    container.classList.add('collapsed');
+                });
+                document.querySelectorAll('#excluded_directory_tree .tree-toggle').forEach(btn => {
+                    if (btn.innerHTML.includes('chevron-down')) {
+                        btn.innerHTML = '<i class="bi bi-chevron-right"></i>';
+                    }
+                });
+            });
+        }
+    }, 100);
+});
+</script>
+{% endblock %}
