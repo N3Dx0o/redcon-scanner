@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" style="background:#0d1117">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -10,6 +10,7 @@
         @page {
             size: A4;
             margin: 2cm;
+            background: #0d1117;
         }
         
         * {
@@ -20,19 +21,19 @@
         
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
-            color: #1a1a1a;
+            color: #e6edf3;
             line-height: 1.8;
             font-size: 10.5pt;
             font-weight: 400;
             letter-spacing: -0.01em;
-            background: #ffffff;
+            background: #0d1117;
         }
         
         .header {
-            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            background: linear-gradient(135deg, #0d1117 0%, #161b22 100%);
             padding: 30px;
             margin: -2cm -2cm 30px -2cm;
-            border-bottom: 4px solid #0ea5e9;
+            border-bottom: 4px solid #c9353f;
         }
         
         h1 {
@@ -45,11 +46,11 @@
         }
         
         h2 {
-            color: #0f172a;
+            color: #e6edf3;
             font-size: 22pt;
             margin-top: 40px;
             margin-bottom: 20px;
-            border-bottom: 3px solid #0ea5e9;
+            border-bottom: 3px solid #c9353f;
             padding-bottom: 12px;
             font-weight: 700;
             letter-spacing: -0.02em;
@@ -58,7 +59,7 @@
         }
         
         h3 {
-            color: #1e293b;
+            color: #c9d1d9;
             font-size: 16pt;
             margin-top: 25px;
             margin-bottom: 14px;
@@ -69,43 +70,56 @@
         
         .meta {
             font-size: 9.5pt;
-            color: #94a3b8;
+            color: #8b949e;
             margin-top: 8px;
             font-weight: 400;
             line-height: 1.6;
         }
         
         .executive-summary {
-            background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
-            border: 2px solid #0ea5e9;
-            border-left: 6px solid #0ea5e9;
-            padding: 30px;
-            margin: 40px 0;
+            background: linear-gradient(135deg, #0d1117 0%, #161b22 100%);
+            border: 2px solid #c9353f;
+            border-top: 4px solid #c9353f;
+            padding: 30px 30px 24px;
+            margin: 40px auto;
+            width: 100%;
             page-break-inside: avoid;
             page-break-before: auto;
-            border-radius: 8px;
+            border-radius: 10px;
+            display: block;
+            box-sizing: border-box;
         }
-        
+
+        .executive-summary h2 {
+            color: #ffffff !important;
+            border-bottom-color: #c9353f !important;
+            text-align: center;
+            margin-top: 0;
+            padding-bottom: 16px;
+            margin-bottom: 8px;
+        }
+
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
-            gap: 16px;
-            margin: 24px 0;
+            gap: 14px;
+            margin: 20px 0 0;
+            width: 100%;
+            box-sizing: border-box;
         }
-        
+
         .stat-card {
-            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-            border: 2px solid #334155;
+            background: #0d1117;
+            border: 1px solid #30363d;
             border-radius: 10px;
-            padding: 20px;
+            padding: 20px 12px;
             text-align: center;
-            transition: all 0.2s;
         }
         
         .stat-value {
             font-size: 36pt;
             font-weight: 800;
-            color: #0ea5e9;
+            color: #c9353f;
             margin-bottom: 6px;
             letter-spacing: -0.03em;
         }
@@ -128,7 +142,7 @@
             font-size: 14pt;
             font-weight: 700;
             margin-bottom: 18px;
-            color: #0f172a;
+            color: #161b22;
             letter-spacing: -0.01em;
             text-transform: uppercase;
         }
@@ -140,7 +154,7 @@
         }
         
         .breakdown-card {
-            background: #f8fafc;
+            background: #161b22;
             border: 2px solid #e5e7eb;
             border-radius: 10px;
             padding: 16px;
@@ -152,11 +166,12 @@
             font-weight: 800;
             margin-bottom: 6px;
             letter-spacing: -0.02em;
+            color: #c9353f;
         }
         
         .breakdown-label {
             font-size: 8.5pt;
-            color: #64748b;
+            color: #c9d1d9;
             text-transform: uppercase;
             letter-spacing: 0.08em;
             font-weight: 600;
@@ -171,7 +186,7 @@
         }
         
         .table thead {
-            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            background: linear-gradient(135deg, #0d1117 0%, #161b22 100%);
             color: white;
         }
         
@@ -192,9 +207,10 @@
         
         .table td {
             padding: 11px 12px;
-            border-bottom: 1px solid #e5e7eb;
+            border-bottom: 1px solid #30363d;
             vertical-align: middle;
             font-size: 9.5pt;
+            color: #c9d1d9;
         }
         
         .table tbody tr {
@@ -202,14 +218,14 @@
         }
         
         .table tbody tr:nth-child(even) {
-            background: #f8fafc;
+            background: #161b22;
         }
         
         .table tbody tr:hover {
-            background: #f1f5f9;
+            background: #1c2128;
         }
         
-        .table-link {
+        .table-link { color: #c9d1d9 !important;
             color: #3498db;
             text-decoration: none;
             font-weight: 500;
@@ -235,7 +251,7 @@
         .sev-high { background: #ea580c; border: 2px solid #c2410c; }
         .sev-medium { background: #f59e0b; border: 2px solid #d97706; }
         .sev-low { background: #10b981; border: 2px solid #059669; }
-        .sev-info { background: #0ea5e9; border: 2px solid #0284c7; }
+        .sev-info { background: #c9353f; border: 2px solid #a12830; }
         
         .status {
             padding: 5px 12px;
@@ -254,21 +270,23 @@
         .status-ignored { background: #64748b; color: white; border: 2px solid #475569; }
         
         .finding-detail {
-            margin: 45px 0;
+            margin: 20px 0;
+            width: 100%;
+            box-sizing: border-box;
             padding: 0;
-            border: 2px solid #0ea5e9;
+            border: 2px solid #c9353f;
             border-radius: 12px;
-            page-break-inside: avoid;
+            page-break-inside: auto;
             page-break-after: auto;
-            background: white;
+            background: #161b22;
             overflow: hidden;
         }
         
         .finding-header {
-            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            background: linear-gradient(135deg, #0d1117 0%, #161b22 100%);
             padding: 20px 24px;
             margin-bottom: 0;
-            border-bottom: 3px solid #0ea5e9;
+            border-bottom: 3px solid #c9353f;
         }
         
         .finding-title {
@@ -285,7 +303,7 @@
             gap: 18px;
             flex-wrap: wrap;
             font-size: 9pt;
-            color: #94a3b8;
+            color: #8b949e;
             font-weight: 500;
         }
         
@@ -302,13 +320,13 @@
         .finding-section-title {
             font-size: 12.5pt;
             font-weight: 700;
-            color: #0f172a;
+            color: #c9353f;
             margin-bottom: 14px;
-            border-left: 4px solid #0ea5e9;
+            border-left: 4px solid #c9353f;
             padding-left: 14px;
             letter-spacing: 0.02em;
             text-transform: uppercase;
-            background: linear-gradient(90deg, #f1f5f9 0%, transparent 100%);
+            background: linear-gradient(90deg, #1c2128 0%, transparent 100%);
             padding-top: 10px;
             padding-bottom: 10px;
             margin-left: -26px;
@@ -317,18 +335,19 @@
         }
         
         .finding-content {
-            background: #f8fafc;
+            background: #161b22;
             padding: 18px;
             border-radius: 6px;
             font-size: 10pt;
             line-height: 1.9;
-            border: 1px solid #e5e7eb;
+            border: 1px solid #30363d;
+            color: #c9d1d9;
         }
         
         .confirmation {
             margin: 20px 0;
             padding: 0;
-            background: white;
+            background: #161b22;
             border: 2px solid #e5e7eb;
             border-radius: 8px;
             overflow: hidden;
@@ -340,9 +359,9 @@
             justify-content: space-between;
             align-items: center;
             margin-bottom: 0;
-            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            background: linear-gradient(135deg, #0d1117 0%, #161b22 100%);
             padding: 12px 16px;
-            border-bottom: 2px solid #0ea5e9;
+            border-bottom: 2px solid #c9353f;
         }
         
         .confirmation-model {
@@ -377,6 +396,7 @@
             margin: 14px 0;
             font-size: 9pt;
             padding: 0 16px;
+            color: #c9d1d9;
         }
         
         .confirmation-detail:last-child {
@@ -385,7 +405,7 @@
         
         .confirmation-label {
             font-weight: 700;
-            color: #0f172a;
+            color: #161b22;
             margin-right: 6px;
             font-size: 9.5pt;
             text-transform: uppercase;
@@ -395,23 +415,23 @@
         }
         
         code {
-            background: #f1f5f9;
+            background: #1c2128;
             padding: 3px 7px;
             border-radius: 4px;
             font-family: 'SF Mono', 'Monaco', 'Cascadia Code', 'Roboto Mono', 'Courier New', monospace;
             font-size: 8.5pt;
             color: #dc2626;
             font-weight: 500;
-            border: 1px solid #e5e7eb;
+            border: 1px solid #30363d;
         }
         
         pre {
-            background: #0f172a;
+            background: #0d1117;
             color: #e2e8f0;
             padding: 14px;
             border-radius: 6px;
             margin: 12px 0;
-            border: 1px solid #1e293b;
+            border: 1px solid #2d333b;
             line-height: 1.6;
             word-wrap: break-word;
             white-space: pre-wrap;
@@ -432,7 +452,7 @@
         .finding-content h4,
         .finding-content h5,
         .finding-content h6 {
-            color: #0f172a;
+            color: #161b22;
             margin-top: 14px;
             margin-bottom: 9px;
             font-weight: 700;
@@ -455,25 +475,27 @@
         .finding-content li {
             margin: 4px 0;
             line-height: 1.6;
+            color: #c9d1d9;
         }
         
         .finding-content p {
             margin: 8px 0;
             line-height: 1.6;
+            color: #c9d1d9;
         }
         
         .finding-content blockquote {
-            border-left: 3px solid #0ea5e9;
+            border-left: 3px solid #c9353f;
             margin: 12px 0;
             padding: 10px 14px;
-            background: #f1f5f9;
+            background: #1c2128;
             font-style: italic;
-            color: #475569;
+            color: #8b949e;
             border-radius: 4px;
         }
         
         .finding-content a {
-            color: #0ea5e9;
+            color: #c9353f;
             text-decoration: none;
             font-weight: 500;
         }
@@ -503,7 +525,7 @@
         
         .finding-content strong {
             font-weight: 600;
-            color: #0f172a;
+            color: #161b22;
         }
         
         .finding-content em {
@@ -517,7 +539,7 @@
         }
         
         .confirmation-detail-content {
-            background: #f8fafc;
+            background: #161b22;
             padding: 14px;
             border-radius: 6px;
             border: 1px solid #e5e7eb;
@@ -598,27 +620,27 @@
         
         .confirmation-detail-content strong {
             font-weight: 600;
-            color: #0f172a;
+            color: #161b22;
         }
         
         .breakdown-critical .breakdown-value { color: #dc2626; }
         .breakdown-high .breakdown-value { color: #ea580c; }
         .breakdown-medium .breakdown-value { color: #f59e0b; }
         .breakdown-low .breakdown-value { color: #10b981; }
-        .breakdown-info .breakdown-value { color: #0ea5e9; }
+        .breakdown-info .breakdown-value { color: #c9353f; }
         
         .confirmation-summary-table {
             width: 100%;
             margin: 20px 0;
             border-collapse: collapse;
             font-size: 9.5pt;
-            background: white;
+            background: #161b22;
             border-radius: 6px;
             overflow: hidden;
         }
         
         .confirmation-summary-table thead {
-            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            background: linear-gradient(135deg, #0d1117 0%, #161b22 100%);
             color: white;
         }
         
@@ -638,13 +660,14 @@
         
         .confirmation-summary-table td {
             padding: 10px 14px;
-            border-bottom: 1px solid #e5e7eb;
+            border-bottom: 1px solid #30363d;
             vertical-align: middle;
             font-size: 9.5pt;
+            color: #c9d1d9;
         }
         
         .confirmation-summary-table tbody tr:nth-child(even) {
-            background: #f8fafc;
+            background: #161b22;
         }
         
         .confirmation-summary-table tbody tr:last-child td {
@@ -660,7 +683,7 @@
         .footer {
             margin-top: 50px;
             padding: 24px 0;
-            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            background: linear-gradient(135deg, #0d1117 0%, #161b22 100%);
             margin-left: -2cm;
             margin-right: -2cm;
             margin-bottom: -2cm;
@@ -668,7 +691,7 @@
             color: #cbd5e1;
             text-align: center;
             font-weight: 400;
-            border-top: 3px solid #0ea5e9;
+            border-top: 3px solid #c9353f;
         }
         
         .footer p {
@@ -678,7 +701,7 @@
         .insights-list {
             list-style: none;
             padding-left: 0;
-            background: white;
+            background: #161b22;
             padding: 18px 20px;
             border-radius: 6px;
             border: 1px solid #e5e7eb;
@@ -701,7 +724,7 @@
             content: "▸";
             position: absolute;
             left: 0;
-            color: #0ea5e9;
+            color: #c9353f;
             font-weight: 700;
             font-size: 12pt;
         }
@@ -719,8 +742,8 @@
         }
         
         .findings-list-container {
-            margin: 35px auto;
-            max-width: 88%;
+            margin: 35px 0;
+            max-width: 100%;
             text-align: left;
             page-break-before: always;
             page-break-after: always;
@@ -730,9 +753,9 @@
             list-style: none;
             padding-left: 0;
             margin: 0;
-            border: 2px solid #0ea5e9;
+            border: 2px solid #c9353f;
             border-radius: 10px;
-            background: #f8fafc;
+            background: #161b22;
             padding: 20px;
         }
         
@@ -740,9 +763,9 @@
             margin: 20px 0 10px 0;
             font-size: 9.5pt;
             font-weight: 700;
-            color: #0f172a;
+            color: #161b22;
             padding: 10px 12px;
-            border-bottom: 2px solid #0ea5e9;
+            border-bottom: 2px solid #c9353f;
             padding-bottom: 10px;
             text-transform: uppercase;
             letter-spacing: 0.08em;
@@ -758,10 +781,13 @@
             margin: 6px 0;
             margin-left: 20px;
             font-size: 9pt;
-            padding: 5px 0;
-            line-height: 1.6;
+            padding: 5px 8px 5px 12px;
+            line-height: 1.4;
             border-left: 2px solid transparent;
-            padding-left: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
             transition: border-color 0.2s;
         }
         
@@ -770,24 +796,26 @@
         }
         
         .finding-item-link {
-            color: #2c3e50;
+            color: #ffffff;
             text-decoration: none;
             font-weight: 500;
             font-size: 9pt;
-            display: inline-block;
-            margin-right: 8px;
+            flex: 1;
+            min-width: 0;
         }
         
         .finding-item-link:hover {
-            color: #3498db;
+            color: #c9353f;
         }
         
         .finding-meta-inline {
-            display: inline-block;
-            margin-left: 0;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            flex-shrink: 0;
             font-size: 8pt;
             color: #7f8c8d;
-            vertical-align: middle;
+            white-space: nowrap;
         }
         
         .finding-meta-inline .badge {
@@ -810,14 +838,26 @@
         }
     </style>
 </head>
-<body>
+<body style="background:#0d1117;color:#e6edf3">
     <div class="header">
-        <h1>Security Findings Report</h1>
-        <div class="meta">
-            Generated at: {{ generated_at.strftime('%Y-%m-%d %H:%M:%S UTC') }}<br>
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px">
+            <div>
+                <div style="font-size:11pt;font-weight:700;color:#c9353f;letter-spacing:0.18em;text-transform:uppercase;margin-bottom:4px;">REDCON OFFENCE</div>
+                <h1 style="margin-bottom:4px;">Security Findings Report</h1>
+                <div style="font-size:9pt;color:#8b949e;letter-spacing:0.06em;text-transform:uppercase;">Unmatched Perception. Unbroken Will.</div>
+            </div>
+            <div style="text-align:right">
+                <div style="font-size:9pt;color:#8b949e;margin-bottom:4px;">Generated</div>
+                <div style="font-size:10pt;color:#e6edf3;font-weight:600;">{{ generated_at.strftime('%B %d, %Y') }}</div>
+                <div style="font-size:8pt;color:#8b949e;margin-top:2px;">{{ generated_at.strftime('%H:%M UTC') }}</div>
+            </div>
+        </div>
+        <div class="meta" style="margin-top:16px;padding-top:14px;border-top:1px solid #2d333b;">
             {% set f = filters %}
-            Filters: Severity={{ f.severity or 'Any' }}, Status={{ f.status or 'Any' }}, 
-            Project={{ f.project_id or 'Any' }}, Search={{ f.search or 'None' }}
+            Severity: <strong style="color:#e6edf3">{{ f.severity or 'All' }}</strong> &nbsp;·&nbsp;
+            Status: <strong style="color:#e6edf3">{{ f.status or 'All' }}</strong> &nbsp;·&nbsp;
+            Project: <strong style="color:#e6edf3">{{ f.project_id or 'All' }}</strong>
+            {% if f.search %}&nbsp;·&nbsp; Search: <strong style="color:#e6edf3">{{ f.search }}</strong>{% endif %}
         </div>
     </div>
 
@@ -953,11 +993,6 @@
                         <span class="finding-meta-inline">
                             {% set sev = (finding.severity.value if finding.severity is not string else finding.severity) | lower %}
                             <span class="badge sev-{{ sev }}">{{ sev|capitalize }}</span>
-                            <span class="finding-meta-separator">•</span>
-                            {% set stat = (finding.status.value if finding.status is not string else finding.status) | lower %}
-                            <span class="status status-{{ stat }}">{{ stat.replace('_', ' ')|title }}</span>
-                            <span class="finding-meta-separator">•</span>
-                            <span>{{ finding.confirmations|length if finding.confirmations else 0 }} confirmation{% if finding.confirmations|length != 1 %}s{% endif %}</span>
                         </span>
                     </li>
                 {% endfor %}
@@ -978,8 +1013,6 @@
                     <span class="badge sev-{{ sev }}">{{ sev|capitalize }}</span>
                 </span>
                 <span><strong>Status:</strong> 
-                    {% set stat = (finding.status.value if finding.status is not string else finding.status) | lower %}
-                    <span class="status status-{{ stat }}">{{ stat.replace('_', ' ')|title }}</span>
                 </span>
                 <span><strong>Created:</strong> {{ finding.created_at.strftime('%Y-%m-%d %H:%M:%S') if finding.created_at else 'N/A' }}</span>
                 {% if finding.resolved_at %}
@@ -1055,7 +1088,7 @@
                                 <span style="color: #6b7280;">No</span>
                             {% endif %}
                         </td>
-                        <td style="color: #64748b; font-size: 9pt;">
+                        <td style="color: #8b949e; font-size: 9pt;">
                             {{ confirmation.created_at.strftime('%Y-%m-%d %H:%M') if confirmation.created_at else 'N/A' }}
                         </td>
                     </tr>
@@ -1117,8 +1150,8 @@
     {% endif %}
 
     <div class="footer">
-        <p>Generated by Security Scanner</p>
-        <p>This report contains confidential security information and should be handled accordingly.</p>
+        <p>Generated by REDCON OFFENCE Security Scanner</p>
+        <p>REDCON OFFENCE — scanner.redconoffence.com — CONFIDENTIAL</p>
     </div>
 </body>
 </html>

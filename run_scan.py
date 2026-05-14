@@ -498,6 +498,10 @@ async def main() -> int:
 
             # Compute all candidate targets
             target_dirs = filter_target_dirs(base_path, excluded_dirs, included_dirs)
+            # If no subdirectories found, scan the root of the project itself
+            if not target_dirs:
+                print(f"[INFO] No subdirectories found — scanning root directory: {base_path}")
+                target_dirs = ['.']
             random.shuffle(target_dirs)
             
             # Build threat models list
@@ -530,6 +534,7 @@ async def main() -> int:
                 return 0
 
             # Process each target directory
+            i = 0
             for i, target in enumerate(target_dirs, 1):
                 print(f"\n=== PROCESSING TARGET {i}/{len(target_dirs)}: {target} ===")
                 

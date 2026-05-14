@@ -26,6 +26,8 @@ class User(Base, UserMixin):
     notify_scan_complete = Column(Boolean, default=True, nullable=False)
     notify_critical_findings = Column(Boolean, default=True, nullable=False)
     onboarding_complete = Column(Boolean, default=False, nullable=False)
+    reset_token = Column(String(128), unique=True, nullable=True, index=True)
+    reset_token_expires = Column(DateTime, nullable=True)
 
     def set_password(self, password: str) -> None:
         self.password_hash = generate_password_hash(password)
@@ -199,6 +201,11 @@ class Project(Base, TimestampMixin):
     last_scanned_at = Column(DateTime, nullable=True, index=True)
     last_modified_at = Column(DateTime, nullable=True)
     owner_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+
+    # Auto-scan schedule
+    scan_schedule = Column(String(20), nullable=True, default=None)   # none/daily/weekly/monthly
+    next_scan_at = Column(DateTime, nullable=True, index=True)         # when next auto-scan runs
+    auto_scan_model_id = Column(Integer, ForeignKey("ai_models.id"), nullable=True)  # model to use
     
     # Relationships
     findings = relationship("Finding", back_populates="project", cascade="all, delete-orphan")
@@ -241,3 +248,40 @@ class Fact(Base, TimestampMixin):
     # Relationships
     project_id = Column(Integer, ForeignKey('projects.id'), nullable=False, index=True)
     project = relationship("Project", back_populates="facts")
+
+
+class PendingInvite(Base):
+    """Stores pending email invitations until the user accepts and sets a password."""
+    __tablename__ = 'pending_invites'
+
+    id = Column(Integer, primary_key=True, index=True)
+    email = Column(String(255), unique=True, nullable=False, index=True)
+    username = Column(String(80), nullable=False)
+    is_admin = Column(Boolean, default=False, nullable=False)
+    token = Column(String(128), unique=True, nullable=False, index=True)
+    invited_by_id = Column(Integer, ForeignKey('users.id'), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    expires_at = Column(DateTime, nullable=False)
+
+
+class NotificationType(str, Enum):
+    SCAN_STARTED  = "scan_started"
+    SCAN_COMPLETE = "scan_complete"
+    SCAN_FAILED   = "scan_failed"
+    AUTO_SCAN     = "auto_scan"
+
+class Notification(Base, TimestampMixin):
+    __tablename__ = "notifications"
+
+    id          = Column(Integer, primary_key=True, index=True)
+    user_id     = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    project_id  = Column(Integer, ForeignKey("projects.id"), nullable=True, index=True)
+    type        = Column(SQLEnum(NotificationType), nullable=False, index=True)
+    title       = Column(String(255), nullable=False)
+    message     = Column(String(1000), nullable=True)
+    is_read     = Column(Boolean, default=False, nullable=False, index=True)
+    link        = Column(String(500), nullable=True)
+
+    user    = relationship("User",    foreign_keys=[user_id])
+    project = relationship("Project", foreign_keys=[project_id])
+

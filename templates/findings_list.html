@@ -323,7 +323,20 @@
                             </span>
                             {% endif %}
                         </div>
-                        <span class="badge status-{{ finding.status.value.replace('_', '-') }}">{{ finding.status.value.replace('_', ' ').title() }}</span>
+                        <div class="dropdown d-inline-block">
+                            <span class="badge status-{{ finding.status.value.replace('_', '-') }} dropdown-toggle" style="cursor:pointer;"
+                                  data-bs-toggle="dropdown" title="Click to change status">
+                                {{ finding.status.value.replace('_', ' ').title() }}
+                            </span>
+                            <ul class="dropdown-menu dropdown-menu-dark" style="min-width:160px;">
+                                <li><h6 class="dropdown-header" style="font-size:.7rem;">Change Status</h6></li>
+                                <li><a class="dropdown-item small" href="#" onclick="quickStatus({{ finding.id }},'open',this);return false;">⚪ Open</a></li>
+                                <li><a class="dropdown-item small" href="#" onclick="quickStatus({{ finding.id }},'in_progress',this);return false;">🔵 In Progress</a></li>
+                                <li><a class="dropdown-item small" href="#" onclick="quickStatus({{ finding.id }},'resolved',this);return false;">🟢 Resolved</a></li>
+                                <li><a class="dropdown-item small" href="#" onclick="quickStatus({{ finding.id }},'false_positive',this);return false;">🟡 False Positive</a></li>
+                                <li><a class="dropdown-item small" href="#" onclick="quickStatus({{ finding.id }},'ignored',this);return false;">⛔ Ignored</a></li>
+                            </ul>
+                        </div>
                     </div>
                     <div class="card-body">
                         <h6 class="card-title">{{ finding.title }}</h6>
@@ -432,7 +445,20 @@
                                     {% endif %}
                                 </td>
                                 <td>
-                                    <span class="badge status-{{ finding.status.value.replace('_', '-') }}">{{ finding.status.value.replace('_', ' ').title() }}</span>
+                                    <div class="dropdown d-inline-block">
+                                        <span class="badge status-{{ finding.status.value.replace('_', '-') }} dropdown-toggle" style="cursor:pointer;"
+                                              data-bs-toggle="dropdown" title="Click to change status">
+                                            {{ finding.status.value.replace('_', ' ').title() }}
+                                        </span>
+                                        <ul class="dropdown-menu dropdown-menu-dark" style="min-width:160px;">
+                                            <li><h6 class="dropdown-header" style="font-size:.7rem;">Change Status</h6></li>
+                                            <li><a class="dropdown-item small" href="#" onclick="quickStatus({{ finding.id }},'open',this);return false;">⚪ Open</a></li>
+                                            <li><a class="dropdown-item small" href="#" onclick="quickStatus({{ finding.id }},'in_progress',this);return false;">🔵 In Progress</a></li>
+                                            <li><a class="dropdown-item small" href="#" onclick="quickStatus({{ finding.id }},'resolved',this);return false;">🟢 Resolved</a></li>
+                                            <li><a class="dropdown-item small" href="#" onclick="quickStatus({{ finding.id }},'false_positive',this);return false;">🟡 False Positive</a></li>
+                                            <li><a class="dropdown-item small" href="#" onclick="quickStatus({{ finding.id }},'ignored',this);return false;">⛔ Ignored</a></li>
+                                        </ul>
+                                    </div>
                                 </td>
                                 <td><small>{{ finding.project.name }}</small></td>
                                 <td>
@@ -628,5 +654,41 @@ function toggleRemoteAttack() {
 function clearAllFilters() {
     window.location.href = window.location.pathname;
 }
+
+    function quickStatus(findingId, newStatus, el) {
+        const statusLabels = {
+            'open': 'Open', 'in_progress': 'In Progress',
+            'resolved': 'Resolved', 'false_positive': 'False Positive', 'ignored': 'Ignored'
+        };
+        const statusClasses = {
+            'open': 'open', 'in_progress': 'in-progress',
+            'resolved': 'resolved', 'false_positive': 'false-positive', 'ignored': 'ignored'
+        };
+        fetch('/api/findings/' + findingId + '/status', {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': window._CSRF_TOKEN || ''
+            },
+            body: JSON.stringify({status: newStatus})
+        })
+        .then(r => r.json())
+        .then(d => {
+            if (d.success) {
+                // Update the badge in the DOM without page reload
+                const badge = el.closest('.dropdown').querySelector('.badge');
+                // Remove old status classes
+                badge.className = badge.className.replace(/status-\S+/g, '');
+                badge.classList.add('status-' + statusClasses[newStatus]);
+                badge.textContent = statusLabels[newStatus] + ' ▾';
+                // Update data-status on parent row for filter
+                const row = el.closest('[data-status]');
+                if (row) row.setAttribute('data-status', newStatus);
+            } else {
+                alert('Failed to update status: ' + (d.error || 'Unknown'));
+            }
+        })
+        .catch(e => alert('Error: ' + e));
+    }
 </script>
 {% endblock %}

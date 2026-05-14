@@ -248,6 +248,22 @@ def main():
         # Clean up log files
         cleanup_log_files(str(output_log), str(error_log))
     
+    # Notify Flask app that scan is complete (triggers notifications)
+    try:
+        import urllib.request as _urlreq, json as _json
+        _project_id = int(args.project_id)
+        _url = "http://localhost:8002/api/projects/" + str(_project_id) + "/scan-complete"
+        _req = _urlreq.Request(
+            _url,
+            data=_json.dumps({}).encode(),
+            headers={"Content-Type": "application/json", "X-Internal-Key": "scanner-internal"},
+            method="POST"
+        )
+        _urlreq.urlopen(_req, timeout=5)
+        print("Scan complete notification sent.")
+    except Exception as _e:
+        print("Could not send scan complete notification: " + str(_e))
+
     print("\nScript completed.")
 
 

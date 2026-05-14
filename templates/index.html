@@ -256,43 +256,21 @@
                         <i class="bi bi-eye me-1"></i>View
                     </a>
                     <button type="button" class="btn btn-sm btn-primary flex-fill"
-                        data-bs-toggle="modal" data-bs-target="#startScanModal"
-                        data-project-id="{{ project.id }}" data-project-name="{{ project.name }}">
+                        onclick="openScanModal({{ project.id }}, '{{ project.name|e }}')">
                         <i class="bi bi-play-fill me-1"></i>Scan
                     </button>
                     <a href="{{ url_for('projects.edit_project', project_id=project.id) }}" class="btn btn-sm btn-outline-secondary">
                         <i class="bi bi-pencil"></i>
                     </a>
                     <button type="button" class="btn btn-sm btn-outline-danger"
-                        data-bs-toggle="modal" data-bs-target="#deleteModal{{ project.id }}">
+                        onclick="openDeleteModal({{ project.id }}, '{{ project.name|e }}')">
                         <i class="bi bi-trash"></i>
                     </button>
                 </div>
 
             </div>
 
-            <!-- Delete Modal -->
-            <div class="modal fade" id="deleteModal{{ project.id }}" tabindex="-1">
-                <div class="modal-dialog">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modal-title"><i class="bi bi-exclamation-triangle text-danger me-2"></i>Delete Project</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                        </div>
-                        <div class="modal-body">
-                            <p>Are you sure you want to delete <strong>"{{ project.name }}"</strong>?</p>
-                            <p class="text-muted mb-0" style="font-size:0.875rem;">This action cannot be undone and will remove all associated findings.</p>
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-                            <form method="POST" action="{{ url_for('projects.delete_project', project_id=project.id) }}" class="d-inline">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                <button type="submit" class="btn btn-danger"><i class="bi bi-trash me-1"></i>Delete</button>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            {# delete modal rendered via openDeleteModal() JS #}
         </div>
         {% endfor %}
     </div>
@@ -311,46 +289,177 @@
 
 </div>
 
-<!-- ── Start Scan Modal ────────────────────────────────────── -->
-<div class="modal fade" id="startScanModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title"><i class="bi bi-play-circle me-2" style="color:var(--redcon-primary);"></i>Start Security Scan</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <div class="mb-3">
-                    <label class="form-label">Project</label>
-                    <input type="text" class="form-control" id="scanProjectName" readonly>
-                    <input type="hidden" id="scanProjectId">
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">AI Model</label>
-                    <select class="form-select" id="scanModelSelect" required>
-                        <option value="">Loading models…</option>
-                    </select>
-                </div>
-                <div id="scanStatus" class="alert d-none"></div>
-                <div id="scanOutput" class="d-none">
-                    <label class="form-label">Output</label>
-                    <pre class="rounded p-3" style="background:#0d1117;border:1px solid #2d333b;font-size:0.8rem;max-height:200px;overflow-y:auto;color:#f0f3f6;" id="scanOutputText"></pre>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
-                <button type="button" class="btn btn-primary" id="startScanBtn">
-                    <i class="bi bi-play-fill me-1"></i>Start Scan
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
+{# scan modal rendered via openScanModal() JS #}
 
 <script>
-document.addEventListener('DOMContentLoaded', function () {
+// ─────────────────────────────────────────────────────────────
+// GLOBAL: modal helpers — must be global for onclick= in HTML
+// ─────────────────────────────────────────────────────────────
+var CSRF_TOKEN = "{{ csrf_token() }}";
 
-    // ── Charts ──────────────────────────────────────────────────
+function rcOverlay() {
+    var o = document.createElement('div');
+    o.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.78);display:flex;align-items:center;justify-content:center;z-index:999999';
+    return o;
+}
+
+function rcBox() {
+    var b = document.createElement('div');
+    b.style.cssText = 'background:#161b22;border:1px solid #2d333b;border-top:3px solid #c9353f;border-radius:14px;width:500px;max-width:94vw;box-shadow:0 24px 60px rgba(0,0,0,0.85);color:#e6edf3;font-family:Inter,sans-serif;overflow:hidden';
+    return b;
+}
+
+function showToast(msg, type) {
+    var colors = { success:['#1f6435','#2ea043'], error:['#7d1a1a','#c9353f'], warning:['#7d5a00','#e3b341'], info:['#0c2d6b','#1f6feb'] };
+    var pair = colors[type] || colors.info;
+    var t = document.createElement('div');
+    t.style.cssText = 'position:fixed;bottom:24px;right:24px;background:'+pair[0]+';border:1px solid '+pair[1]+';color:#e6edf3;padding:14px 20px;border-radius:10px;font-family:Inter,sans-serif;font-size:14px;z-index:9999999;max-width:360px;box-shadow:0 8px 24px rgba(0,0,0,0.5);transform:translateX(120%);transition:transform 0.3s ease';
+    t.textContent = msg;
+    document.body.appendChild(t);
+    requestAnimationFrame(function() { t.style.transform = 'translateX(0)'; });
+    setTimeout(function() { t.style.transform = 'translateX(120%)'; setTimeout(function() { t.remove(); }, 300); }, 4000);
+}
+
+function setStatus(el, msg, type) {
+    var colors = { success:['#1f6435','#2ea043'], error:['#7d1a1a','#c9353f'], warning:['#7d5a00','#e3b341'], info:['#0c2d6b','#1f6feb'] };
+    var pair = colors[type] || colors.info;
+    el.style.background = pair[0];
+    el.style.border = '1px solid ' + pair[1];
+    el.style.whiteSpace = 'pre-line';
+    el.textContent = msg;
+    el.style.display = 'block';
+}
+
+function openScanModal(projId, projName) {
+    var overlay = rcOverlay();
+    var box = rcBox();
+    box.innerHTML =
+        '<div style="padding:20px 24px;border-bottom:1px solid #2d333b;display:flex;justify-content:space-between;align-items:center">' +
+            '<span style="font-size:16px;font-weight:600">&#9654; Start Security Scan</span>' +
+            '<button id="_sX" style="background:none;border:none;color:#8b949e;font-size:22px;cursor:pointer;line-height:1">&times;</button>' +
+        '</div>' +
+        '<div style="padding:20px 24px">' +
+            '<div style="margin-bottom:14px">' +
+                '<div style="font-size:12px;color:#8b949e;margin-bottom:4px">Project</div>' +
+                '<div style="font-size:14px;font-weight:600;color:#e6edf3">' + projName + '</div>' +
+            '</div>' +
+            '<label style="display:block;margin-bottom:8px;font-size:13px;color:#8b949e">Select AI Model</label>' +
+            '<select id="_sMdl" style="width:100%;background:#0d1117;border:1px solid #30363d;color:#e6edf3;padding:10px 12px;border-radius:8px;font-size:14px">' +
+                '<option value="">Loading models...</option>' +
+            '</select>' +
+            '<div id="_sStat" style="display:none;margin-top:14px;padding:12px 16px;border-radius:8px;font-size:13px;line-height:1.6"></div>' +
+        '</div>' +
+        '<div style="padding:16px 24px;border-top:1px solid #2d333b;display:flex;justify-content:flex-end;gap:10px">' +
+            '<button id="_sClose" style="background:#21262d;border:1px solid #30363d;color:#e6edf3;padding:8px 18px;border-radius:8px;cursor:pointer;font-size:14px">Close</button>' +
+            '<button id="_sStart" style="background:#1f6435;border:1px solid #2ea043;color:#fff;padding:8px 20px;border-radius:8px;cursor:pointer;font-size:14px;font-weight:600">&#9654; Start Scan</button>' +
+        '</div>';
+
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+
+    var sel  = box.querySelector('#_sMdl');
+    var stat = box.querySelector('#_sStat');
+    var btn  = box.querySelector('#_sStart');
+
+    function closeModal() { document.body.removeChild(overlay); }
+    box.querySelector('#_sX').onclick     = closeModal;
+    box.querySelector('#_sClose').onclick = closeModal;
+    overlay.addEventListener('click', function(e) { if (e.target === overlay) closeModal(); });
+
+    fetch('/api/ai-models')
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+            if (!d.models || d.models.length === 0) {
+                sel.innerHTML = '<option value="">-- No AI models configured --</option>';
+                btn.disabled = true;
+                setStatus(stat, 'No AI models configured. Go to Settings to add an API key.', 'warning');
+                return;
+            }
+            sel.innerHTML = '<option value="">Select an AI Model</option>';
+            d.models.forEach(function(m) {
+                var o = document.createElement('option');
+                o.value = m.id;
+                o.textContent = m.vendor + '/' + m.model_name + ' (' + m.api_key_suffix + ')';
+                sel.appendChild(o);
+            });
+        })
+        .catch(function() { sel.innerHTML = '<option value="">Error loading models</option>'; });
+
+    btn.addEventListener('click', function() {
+        if (!sel.value) { setStatus(stat, 'Please select an AI model.', 'warning'); return; }
+        btn.disabled = true;
+        btn.textContent = 'Starting...';
+        stat.style.display = 'none';
+
+        fetch('/projects/' + projId + '/start-scan', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
+            body: JSON.stringify({ model_id: parseInt(sel.value) })
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+            if (d.success) {
+                var msg = d.already_running ? 'Scan already running.' : 'Scan started successfully.';
+                if (d.pid)      msg += '\nProcess ID: ' + d.pid;
+                if (d.log_file) msg += '\nLog: ' + d.log_file;
+                setStatus(stat, msg, d.already_running ? 'info' : 'success');
+                if (!d.already_running) showToast('Scan started successfully', 'success');
+            } else {
+                setStatus(stat, d.error || 'Failed to start scan.', 'error');
+            }
+            btn.disabled = false;
+            btn.textContent = '▶ Start Scan';
+        })
+        .catch(function(err) {
+            setStatus(stat, 'Request error: ' + err.message, 'error');
+            btn.disabled = false;
+            btn.textContent = '▶ Start Scan';
+        });
+    });
+}
+
+function openDeleteModal(projId, projName) {
+    var overlay = rcOverlay();
+    var box = rcBox();
+    box.innerHTML =
+        '<div style="padding:20px 24px;border-bottom:1px solid #2d333b;display:flex;justify-content:space-between;align-items:center">' +
+            '<span style="font-size:16px;font-weight:600;color:#f85149">&#9888; Delete Project</span>' +
+            '<button id="_dX" style="background:none;border:none;color:#8b949e;font-size:22px;cursor:pointer;line-height:1">&times;</button>' +
+        '</div>' +
+        '<div style="padding:20px 24px;font-size:14px;line-height:1.7">' +
+            'Are you sure you want to delete <strong style="color:#e6edf3">"' + projName + '"</strong>?<br>' +
+            '<span style="color:#8b949e;font-size:13px">This cannot be undone and will remove all associated findings.</span>' +
+        '</div>' +
+        '<div style="padding:16px 24px;border-top:1px solid #2d333b;display:flex;justify-content:flex-end;gap:10px">' +
+            '<button id="_dClose" style="background:#21262d;border:1px solid #30363d;color:#e6edf3;padding:8px 18px;border-radius:8px;cursor:pointer;font-size:14px">Cancel</button>' +
+            '<button id="_dDel" style="background:#c9353f;border:none;color:#fff;padding:8px 20px;border-radius:8px;cursor:pointer;font-size:14px;font-weight:600">Delete</button>' +
+        '</div>';
+
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+
+    var btn = box.querySelector('#_dDel');
+    function closeModal() { document.body.removeChild(overlay); }
+    box.querySelector('#_dX').onclick     = closeModal;
+    box.querySelector('#_dClose').onclick = closeModal;
+    overlay.addEventListener('click', function(e) { if (e.target === overlay) closeModal(); });
+
+    btn.addEventListener('click', function() {
+        btn.disabled = true;
+        btn.textContent = 'Deleting...';
+        var form  = document.createElement('form');
+        form.method = 'POST';
+        form.action = '/projects/' + projId + '/delete';
+        var csrf  = document.createElement('input');
+        csrf.type = 'hidden'; csrf.name = 'csrf_token'; csrf.value = CSRF_TOKEN;
+        form.appendChild(csrf);
+        document.body.appendChild(form);
+        form.submit();
+    });
+}
+
+// ── Charts (DOM must be ready) ────────────────────────────────
+document.addEventListener('DOMContentLoaded', function () {
     {% if findings_count > 0 %}
     Chart.defaults.color       = '#9198a1';
     Chart.defaults.borderColor = '#2d333b';
@@ -442,88 +551,6 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     {% endif %}
 
-    // ── Scan Modal ───────────────────────────────────────────────
-    const scanModal  = document.getElementById('startScanModal');
-    const modelSel   = document.getElementById('scanModelSelect');
-    const projIdIn   = document.getElementById('scanProjectId');
-    const projNameIn = document.getElementById('scanProjectName');
-    const startBtn   = document.getElementById('startScanBtn');
-    const statusBox  = document.getElementById('scanStatus');
-    const outputBox  = document.getElementById('scanOutput');
-    const outputPre  = document.getElementById('scanOutputText');
-
-    if (scanModal) {
-        scanModal.addEventListener('show.bs.modal', function (e) {
-            const btn = e.relatedTarget;
-            projIdIn.value   = btn.getAttribute('data-project-id');
-            projNameIn.value = btn.getAttribute('data-project-name');
-            loadModels();
-            statusBox.classList.add('d-none');
-            outputBox.classList.add('d-none');
-            startBtn.disabled = false;
-            startBtn.innerHTML = '<i class="bi bi-play-fill me-1"></i>Start Scan';
-        });
-
-        function loadModels() {
-            modelSel.innerHTML = '<option value="">Loading…</option>';
-            fetch('/api/ai-models')
-                .then(r => r.json())
-                .then(d => {
-                    modelSel.innerHTML = '<option value="">Select an AI Model</option>';
-                    d.models.forEach(m => {
-                        const o = document.createElement('option');
-                        o.value = m.id;
-                        o.textContent = `${m.vendor}/${m.model_name} (${m.api_key_suffix})`;
-                        modelSel.appendChild(o);
-                    });
-                })
-                .catch(() => { modelSel.innerHTML = '<option value="">Error loading models</option>'; });
-        }
-
-        startBtn.addEventListener('click', function () {
-            const modelId = modelSel.value;
-            const projId  = projIdIn.value;
-            if (!modelId) { showStatus('warning', 'Please select an AI model.'); return; }
-            if (!projId)  { showStatus('danger',  'Project ID missing.'); return; }
-
-            startBtn.disabled = true;
-            startBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Starting…';
-            statusBox.classList.add('d-none');
-            outputBox.classList.add('d-none');
-
-            fetch(`/projects/${projId}/start-scan`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ model_id: parseInt(modelId) })
-            })
-            .then(r => r.json())
-            .then(d => {
-                if (d.success) {
-                    let msg = d.already_running ? 'Scan already running.' : 'Scan started successfully.';
-                    if (d.pid)      msg += `\nProcess ID: ${d.pid}`;
-                    if (d.log_file) msg += `\nLog: ${d.log_file}`;
-                    showStatus(d.already_running ? 'info' : 'success', msg);
-                    if (d.output) { outputPre.textContent = d.output; outputBox.classList.remove('d-none'); }
-                } else {
-                    showStatus('danger', d.error || 'Failed to start scan.');
-                }
-                startBtn.disabled = false;
-                startBtn.innerHTML = '<i class="bi bi-play-fill me-1"></i>Start Scan';
-            })
-            .catch(err => {
-                showStatus('danger', 'Error: ' + err.message);
-                startBtn.disabled = false;
-                startBtn.innerHTML = '<i class="bi bi-play-fill me-1"></i>Start Scan';
-            });
-        });
-
-        function showStatus(type, msg) {
-            statusBox.className = `alert alert-${type}`;
-            statusBox.style.whiteSpace = 'pre-line';
-            statusBox.textContent = msg;
-            statusBox.classList.remove('d-none');
-        }
-    }
 });
 </script>
 {% endblock %}

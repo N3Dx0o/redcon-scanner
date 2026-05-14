@@ -417,20 +417,20 @@ document.addEventListener('DOMContentLoaded', function() {
                 const projectName = document.getElementById('project_name').value.trim();
                 
                 if (!projectName) {
-                    alert('Please enter a project name');
+                    showToast('Please enter a project name', 'warning');
                     return false;
                 }
-                
+
                 if (inputType === 'zip_file') {
                     const zipFileInput = document.getElementById('zip_file_input');
                     if (!zipFileInput || !zipFileInput.files[0]) {
-                        alert('Please select a zip file');
+                        showToast('Please select a zip file', 'warning');
                         return false;
                     }
                 } else {
                     const gitUrl = document.getElementById('git_url').value.trim();
                     if (!gitUrl) {
-                        alert('Please enter a Git URL');
+                        showToast('Please enter a Git URL', 'warning');
                         return false;
                     }
                 }
@@ -438,14 +438,14 @@ document.addEventListener('DOMContentLoaded', function() {
             case 2:
                 const selectedModels = $('#ai_models_select').val();
                 if (!selectedModels || selectedModels.length === 0) {
-                    alert('Please select at least one AI model');
+                    showToast('Please select at least one AI model', 'warning');
                     return false;
                 }
                 break;
             case 3:
                 const selectedThreats = $('#threat_models_select').val();
                 if (!selectedThreats || selectedThreats.length === 0) {
-                    alert('Please select at least one threat model');
+                    showToast('Please select at least one threat model', 'warning');
                     return false;
                 }
                 break;
@@ -475,7 +475,7 @@ document.addEventListener('DOMContentLoaded', function() {
             })
             .catch(error => {
                 console.error('Error loading AI models:', error);
-                alert('Error loading AI models');
+                showToast('Error loading AI models', 'error');
             });
     }
     
@@ -604,7 +604,7 @@ document.addEventListener('DOMContentLoaded', function() {
             })
             .catch(error => {
                 console.error('Error loading threat models:', error);
-                alert('Error loading threat models');
+                showToast('Error loading threat models', 'error');
             });
     }
     
@@ -759,15 +759,15 @@ document.addEventListener('DOMContentLoaded', function() {
     // Form submission
     document.getElementById('onboardingForm').addEventListener('submit', function(e) {
         e.preventDefault();
-        
+
         const submitBtn = document.getElementById('createBtn');
         const originalText = submitBtn.innerHTML;
-        
+
         submitBtn.disabled = true;
         submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Creating...';
-        
+
         const formData = new FormData(this);
-        
+
         fetch('/projects/onboard', {
             method: 'POST',
             body: formData
@@ -775,22 +775,47 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                alert('Project created successfully!');
-                window.location.href = '/projects/' + data.project_id + '/edit';
+                showSuccessOverlay(data.project_id);
             } else {
-                alert('Error: ' + data.error);
+                showToast(data.error || 'Failed to create project', 'error');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            alert('Error creating project');
-        })
-        .finally(() => {
+            showToast('Network error — please try again', 'error');
             submitBtn.disabled = false;
             submitBtn.innerHTML = originalText;
         });
     });
-    
+
 });
+
+// ── Helpers (global scope) ────────────────────────────────────────────────────
+function showToast(msg, type) {
+    const colors = { success:['#1f6435','#2ea043'], error:['#7d1a1a','#c9353f'], warning:['#7d5a00','#e3b341'], info:['#0c2d6b','#1f6feb'] };
+    const [bg, border] = colors[type] || colors.info;
+    const t = document.createElement('div');
+    t.style.cssText = `position:fixed;bottom:24px;right:24px;background:${bg};border:1px solid ${border};color:#e6edf3;padding:14px 20px;border-radius:10px;font-family:Inter,sans-serif;font-size:14px;z-index:9999999;max-width:360px;box-shadow:0 8px 24px rgba(0,0,0,0.5);transform:translateX(120%);transition:transform 0.3s ease`;
+    t.textContent = msg;
+    document.body.appendChild(t);
+    requestAnimationFrame(() => { t.style.transform = 'translateX(0)'; });
+    setTimeout(() => { t.style.transform = 'translateX(120%)'; setTimeout(() => t.remove(), 300); }, 4000);
+}
+
+function showSuccessOverlay(projectId) {
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.82);display:flex;align-items:center;justify-content:center;z-index:999999';
+    overlay.innerHTML = `
+        <div style="background:#161b22;border:1px solid #2d333b;border-top:3px solid #2ea043;border-radius:16px;width:460px;max-width:92vw;padding:36px 32px;text-align:center;box-shadow:0 32px 80px rgba(0,0,0,0.9);font-family:Inter,sans-serif;color:#e6edf3">
+            <div style="width:64px;height:64px;background:#1f6435;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;font-size:28px">✓</div>
+            <div style="font-size:20px;font-weight:700;margin-bottom:8px">Project Created!</div>
+            <div style="color:#8b949e;font-size:14px;margin-bottom:28px">Your project has been set up successfully and is ready to scan.</div>
+            <button onclick="window.location.href='/projects/${projectId}/edit'" style="background:#c9353f;border:none;color:#fff;padding:12px 28px;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;width:100%">View Project →</button>
+        </div>`;
+    document.body.appendChild(overlay);
+}
+
 </script>
 {% endblock %}

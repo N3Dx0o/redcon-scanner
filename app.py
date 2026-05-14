@@ -269,6 +269,45 @@ csrf.exempt(api_bp)
 app.register_blueprint(status_bp)
 app.register_blueprint(logs_bp)
 
+
+# ── Auto-scan background scheduler ───────────────────────────────────────────
+def _start_auto_scheduler():
+    """Start the auto-scan scheduler — called once after app fully initialises."""
+    try:
+        from utils.auto_scheduler import init_scheduler
+        init_scheduler(app)
+    except Exception as _e:
+        import logging as _log
+        _log.getLogger(__name__).error(f'Failed to start auto-scan scheduler: {_e}')
+
+# Delay start until first request so DB/ORM are fully ready
+_scheduler_started = False
+@app.before_request
+def _ensure_scheduler():
+    global _scheduler_started
+    if not _scheduler_started:
+        _scheduler_started = True
+        _start_auto_scheduler()
+
+# ── Health check endpoint ─────────────────────────────────────────────────────
+@app.route('/health')
+def health_check():
+    """Simple health check for load balancers and uptime monitors"""
+    from flask import jsonify as _j
+    import sqlite3 as _sq
+    try:
+        db_name = os.getenv('DB_DATABASE', 'scanner.db')
+        db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), db_name)
+        conn = _sq.connect(db_path, timeout=2)
+        conn.execute('SELECT 1').fetchone()
+        conn.close()
+        db_ok = True
+    except Exception:
+        db_ok = False
+    status = 'ok' if db_ok else 'degraded'
+    code = 200 if db_ok else 503
+    return _j({'status': status, 'db': 'ok' if db_ok else 'error', 'service': 'scanner'}), code
+
 # Error handlers
 @app.errorhandler(404)
 def not_found(error):

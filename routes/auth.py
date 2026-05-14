@@ -6,6 +6,7 @@ from flask import Blueprint, render_template, redirect, url_for, flash, request,
 from flask_login import login_user, logout_user, login_required, current_user
 from datetime import datetime
 import logging
+import os
 import time as _time
 from collections import defaultdict
 from urllib.parse import urlparse
@@ -127,7 +128,9 @@ def logout():
 
 @auth_bp.route('/register', methods=['GET', 'POST'])
 def register():
-    """Registration is only available to admins, or when no users exist yet (first run)."""
+    """Registration is only available when ALLOW_REGISTRATION=true env var is set,
+    or when no users exist yet (first-run onboarding). Admins create new users via /admin/users."""
+    import os
     orm = _get_orm()
 
     # Allow anyone to register when there are zero users (first-run onboarding)
@@ -136,10 +139,10 @@ def register():
 
     first_run = (user_count == 0)
 
-    # If users exist, only admins may register new accounts
+    # Block registration entirely unless explicitly enabled via env var
     if not first_run:
-        if not current_user.is_authenticated or not current_user.is_admin:
-            flash('Only administrators can register new accounts.', 'danger')
+        registration_open = os.getenv('ALLOW_REGISTRATION', 'false').lower() == 'true'
+        if not registration_open:
             return redirect(url_for('auth.login'))
 
     error = None
@@ -187,6 +190,132 @@ def register():
 
     return render_template('auth/register.html', error=error, first_run=first_run)
 
+
+
+
+# --- admin invite user ---
+
+@auth_bp.route('/settings/users/add', methods=['GET', 'POST'])
+@login_required
+def add_user():
+    import secrets
+    from datetime import timedelta
+    from db.models import PendingInvite
+    from utils.email_notifications import send_invite_email
+
+    if not current_user.is_admin:
+        flash('Admin access required.', 'danger')
+        return redirect(url_for('home.index'))
+
+    orm = _get_orm()
+    error = None
+    smtp_configured = bool(os.getenv('SMTP_USERNAME') and os.getenv('SMTP_PASSWORD'))
+
+    if request.method == 'POST':
+        username   = request.form.get('username', '').strip()
+        email      = request.form.get('email', '').strip().lower()
+        make_admin = request.form.get('is_admin') == 'on'
+
+        if not username or not email:
+            error = 'Username and email are required.'
+        elif len(username) < 3:
+            error = 'Username must be at least 3 characters.'
+        else:
+            with orm.get_session() as sess:
+                # Check for existing user or pending invite
+                existing_user = sess.query(User).filter(
+                    (User.username == username) | (User.email == email)
+                ).first()
+                existing_invite = sess.query(PendingInvite).filter(
+                    (PendingInvite.username == username) | (PendingInvite.email == email)
+                ).first()
+
+                if existing_user:
+                    error = 'Username or email is already taken.'
+                elif existing_invite:
+                    error = 'An invite is already pending for that username or email.'
+                else:
+                    token = secrets.token_urlsafe(48)
+                    invite = PendingInvite(
+                        email=email,
+                        username=username,
+                        is_admin=make_admin,
+                        token=token,
+                        invited_by_id=current_user.id,
+                        expires_at=datetime.utcnow() + timedelta(hours=24),
+                    )
+                    sess.add(invite)
+                    sess.commit()
+
+                    invite_url = request.url_root.rstrip('/') + url_for('auth.accept_invite', token=token)
+
+                    if smtp_configured:
+                        sent = send_invite_email(email, username, current_user.username, invite_url)
+                        if sent:
+                            flash(f'Invitation sent to {email}.', 'success')
+                        else:
+                            flash(f'Invite created but email failed. Share this link manually: {invite_url}', 'warning')
+                    else:
+                        flash(f'SMTP not configured. Share this invite link manually: {invite_url}', 'warning')
+
+                    return redirect(url_for('auth.manage_users'))
+
+    return render_template('auth/add_user.html', error=error, smtp_configured=smtp_configured)
+
+
+# --- accept invite ---
+
+@auth_bp.route('/invite/<token>', methods=['GET', 'POST'])
+def accept_invite(token):
+    from db.models import PendingInvite
+    orm = _get_orm()
+
+    with orm.get_session() as sess:
+        invite = sess.query(PendingInvite).filter_by(token=token).first()
+
+        if not invite:
+            return render_template('auth/invite_invalid.html', reason='This invite link is invalid.')
+        if datetime.utcnow() > invite.expires_at:
+            sess.delete(invite)
+            sess.commit()
+            return render_template('auth/invite_invalid.html', reason='This invite link has expired.')
+
+        error = None
+        if request.method == 'POST':
+            password = request.form.get('password', '')
+            confirm  = request.form.get('confirm_password', '')
+
+            if not password:
+                error = 'Password is required.'
+            elif _validate_password_strength(password) is not None:
+                error = _validate_password_strength(password)
+            elif password != confirm:
+                error = 'Passwords do not match.'
+            else:
+                # Check no one took the username/email while invite was pending
+                clash = sess.query(User).filter(
+                    (User.username == invite.username) | (User.email == invite.email)
+                ).first()
+                if clash:
+                    sess.delete(invite)
+                    sess.commit()
+                    return render_template('auth/invite_invalid.html', reason='This username or email is already registered.')
+
+                new_user = User(
+                    username=invite.username,
+                    email=invite.email,
+                    is_admin=invite.is_admin,
+                )
+                new_user.set_password(password)
+                sess.add(new_user)
+                sess.delete(invite)
+                sess.commit()
+                logger.info(f"User '{invite.username}' accepted invite and created account.")
+                flash(f'Welcome, {invite.username}! Your account is ready.', 'success')
+                return redirect(url_for('auth.login'))
+
+        return render_template('auth/accept_invite.html',
+                               invite=invite, error=error)
 
 # ─── manage users (admin) ─────────────────────────────────────────────────────
 
@@ -320,6 +449,116 @@ def update_notifications():
 
 
 # ─── onboarding ────────────────────────────────────────────────────────────────
+
+
+
+@auth_bp.route('/forgot-password', methods=['GET', 'POST'])
+def forgot_password():
+    """Request a password reset link"""
+    from flask_login import current_user
+    if current_user.is_authenticated:
+        return redirect(url_for('auth.settings'))
+
+    if request.method == 'POST':
+        # Rate limit by IP
+        ip = _get_ip(request)
+        if _is_locked(ip):
+            flash('Too many attempts. Please wait a few minutes.', 'error')
+            return render_template('auth/forgot_password.html')
+
+        email = request.form.get('email', '').strip().lower()
+        if not email:
+            flash('Email is required.', 'error')
+            return render_template('auth/forgot_password.html')
+
+        _record_fail(ip)  # count each attempt
+
+        orm = _get_orm()
+        with orm.get_session() as session:
+            from db.models import User
+            user = session.query(User).filter(
+                User.email == email
+            ).first()
+
+            if user:
+                import secrets
+                from datetime import datetime, timedelta
+                token = secrets.token_urlsafe(32)
+                user.reset_token = token
+                user.reset_token_expires = datetime.utcnow() + timedelta(hours=1)
+                session.commit()
+
+                reset_url = url_for('auth.reset_password', token=token, _external=True)
+                try:
+                    from utils.email_notifications import send_password_reset_email
+                    send_password_reset_email(user.email, reset_url, user.username)
+                except Exception as e:
+                    logger.error(f'Password reset email failed: {e}')
+
+        # Always show success to avoid user enumeration
+        flash('If that email is registered, you will receive a reset link shortly.', 'success')
+        return render_template('auth/forgot_password.html')
+
+    return render_template('auth/forgot_password.html')
+
+
+@auth_bp.route('/reset-password/<token>', methods=['GET', 'POST'])
+def reset_password(token):
+    """Reset password using a valid token"""
+    from flask_login import current_user
+    if current_user.is_authenticated:
+        return redirect(url_for('auth.settings'))
+
+    from datetime import datetime
+    import hmac
+
+    orm = _get_orm()
+    with orm.get_session() as session:
+        from db.models import User
+        # Find user with matching token (constant-time comparison via hmac)
+        users = session.query(User).filter(User.reset_token != None).all()
+        matched_user = None
+        for u in users:
+            if u.reset_token and hmac.compare_digest(u.reset_token, token):
+                matched_user = u
+                break
+
+        if not matched_user or not matched_user.reset_token_expires:
+            flash('This reset link is invalid or has expired.', 'error')
+            return redirect(url_for('auth.forgot_password'))
+
+        if matched_user.reset_token_expires < datetime.utcnow():
+            matched_user.reset_token = None
+            matched_user.reset_token_expires = None
+            session.commit()
+            flash('This reset link has expired. Please request a new one.', 'error')
+            return redirect(url_for('auth.forgot_password'))
+
+        if request.method == 'POST':
+            password = request.form.get('password', '')
+            confirm = request.form.get('confirm_password', '')
+
+            if password != confirm:
+                flash('Passwords do not match.', 'error')
+                return render_template('auth/reset_password.html', token=token)
+
+            err = _validate_password_strength(password)
+            if err:
+                flash(err, 'error')
+                return render_template('auth/reset_password.html', token=token)
+
+            from werkzeug.security import generate_password_hash
+            matched_user.password_hash = generate_password_hash(password)
+            matched_user.reset_token = None
+            matched_user.reset_token_expires = None
+            session.commit()
+
+            logger.info(f'Password reset completed for user {matched_user.username}')
+            flash('Password updated successfully. You can now log in.', 'success')
+            return redirect(url_for('auth.login'))
+
+        return render_template('auth/reset_password.html', token=token)
+
 
 @auth_bp.route('/onboarding/complete', methods=['POST'])
 @login_required

@@ -22,7 +22,10 @@ def export_page():
     try:
         orm = get_orm_instance()
         with orm.get_session() as session:
-            projects = orm.get_all(session, Project)
+            if current_user.is_admin:
+                projects = orm.get_all(session, Project)
+            else:
+                projects = session.query(Project).filter(Project.owner_id == current_user.id).all()
             return render_template('export.html', projects=projects, is_windows=platform.system().lower().startswith('win'))
     except Exception as e:
         logger.error(f"Error loading export page: {e}")
@@ -46,16 +49,25 @@ def export_pdf():
             project_id = request.form.get('project_id')
             search = request.form.get('search')
 
-            query = session.query(Finding).options(
+            query = session.query(Finding).join(Finding.project).options(
                 joinedload(Finding.project),
                 joinedload(Finding.confirmations).joinedload(Confirmation.model)
             )
+            # Scope to current user's projects
+            if not current_user.is_admin:
+                query = query.filter(Project.owner_id == current_user.id)
             if severity:
                 query = query.filter(Finding.severity == severity)
             if status:
                 query = query.filter(Finding.status == status)
             if project_id:
-                query = query.filter(Finding.project_id == project_id)
+                # Security: verify the requested project belongs to this user
+                proj_check = session.query(Project).filter(Project.id == project_id).first()
+                if proj_check and (current_user.is_admin or proj_check.owner_id == current_user.id):
+                    query = query.filter(Finding.project_id == project_id)
+                elif proj_check:
+                    # Silently ignore unauthorized project filter
+                    pass
             if search:
                 query = query.filter(
                     Finding.title.ilike(f"%{search}%") |

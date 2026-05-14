@@ -16,7 +16,7 @@ logging.getLogger('sqlalchemy.orm').setLevel(logging.WARNING)
 logging.getLogger('sqlalchemy.engine.Engine').setLevel(logging.WARNING)
 
 from .config import DatabaseConfig, get_config_from_env, DEFAULT_CONFIGS
-from .models import Base, AIModel, Finding, Project, Confirmation, User
+from .models import Base, AIModel, Finding, Project, Confirmation, User, PendingInvite
 
 # Type variable for model classes
 T = TypeVar('T', bound=Base)

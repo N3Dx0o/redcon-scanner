@@ -373,11 +373,15 @@
                     </div>
                 </div>
                 <div class="action-buttons">
-                    <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#startScanModal">
+                    <button type="button" class="btn btn-success" onclick="openScanModal()">
                         <i class="bi bi-play-circle me-1"></i>Start Scan
                     </button>
+                    <button type="button" class="btn btn-outline-secondary" onclick="openScheduleModal()" title="Configure auto-scan schedule">
+                        <i class="bi bi-clock-history me-1"></i>Auto Scan
+                        <span id="scheduleActiveBadge" style="display:none;background:#c9353f;color:#fff;font-size:0.65rem;padding:1px 6px;border-radius:999px;margin-left:4px;vertical-align:middle;">ON</span>
+                    </button>
                     {% if project.findings %}
-                    <button type="button" class="btn btn-info" data-bs-toggle="modal" data-bs-target="#bulkValidateModal">
+                    <button type="button" class="btn btn-info" onclick="openValidateModal()">
                         <i class="bi bi-check2-all me-1"></i>Validate All
                     </button>
                     {% endif %}
@@ -692,7 +696,7 @@
                             <i class="bi bi-shield-check text-muted mb-3 d-block" style="font-size: 3rem;"></i>
                             <p class="text-muted mb-2 fw-semibold">No findings found</p>
                             <p class="text-muted small">Start a scan to discover security vulnerabilities</p>
-                            <button type="button" class="btn btn-success btn-sm mt-3" data-bs-toggle="modal" data-bs-target="#startScanModal">
+                            <button type="button" class="btn btn-success btn-sm mt-3" onclick="openScanModal()">
                                 <i class="bi bi-play-circle me-1"></i>Start Scan
                             </button>
                         </div>
@@ -1024,70 +1028,82 @@
     </div>
 </div>
 
-<!-- Start Scan Modal -->
-<div class="modal fade" id="startScanModal" tabindex="-1" aria-labelledby="startScanModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="startScanModalLabel">Start Security Scan</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <div class="mb-3">
-                    <label for="scanModelSelect" class="form-label">Select AI Model</label>
-                    <select class="form-select" id="scanModelSelect" required>
-                        <option value="">Loading models...</option>
-                    </select>
-                </div>
-                <div id="scanStatus" class="alert d-none" role="alert"></div>
-                <div id="scanOutput" class="d-none">
-                    <label class="form-label">Scan Output:</label>
-                    <pre class="bg-dark text-light p-3 rounded" style="max-height: 200px; overflow-y: auto; font-size: 0.85rem;" id="scanOutputText"></pre>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                <button type="button" class="btn btn-success" id="startScanBtn">
-                    <i class="bi bi-play-circle me-1"></i>Start Scan
-                </button>
-            </div>
-        </div>
+
+<!-- ── Auto-Scan Schedule Modal ───────────────────────────────────────────── -->
+<div id="scheduleModalOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:9999;align-items:center;justify-content:center;">
+  <div style="background:#161b22;border:1px solid #2d333b;border-top:3px solid #c9353f;border-radius:12px;padding:2rem;width:100%;max-width:480px;margin:1rem;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;">
+      <div>
+        <div style="font-size:1.1rem;font-weight:700;color:#e6edf3;"><i class="bi bi-clock-history me-2" style="color:#c9353f;"></i>Auto-Scan Schedule</div>
+        <div style="font-size:0.8rem;color:#8b949e;margin-top:2px;">Automatically rescan this project on a schedule</div>
+      </div>
+      <button onclick="closeScheduleModal()" style="background:none;border:none;color:#8b949e;font-size:1.2rem;cursor:pointer;padding:4px;">&#x2715;</button>
     </div>
+
+    <div style="margin-bottom:1.25rem;">
+      <label style="display:block;font-size:0.8rem;font-weight:600;color:#8b949e;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.5rem;">AI Model</label>
+      <select id="scheduleModelSel" style="width:100%;background:#0d1117;border:1px solid #2d333b;color:#e6edf3;padding:0.6rem 0.75rem;border-radius:6px;font-size:0.875rem;">
+        <option value="">Loading models...</option>
+      </select>
+    </div>
+
+    <div style="margin-bottom:1.5rem;">
+      <label style="display:block;font-size:0.8rem;font-weight:600;color:#8b949e;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.5rem;">Frequency</label>
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:0.6rem;" id="scheduleOptions">
+        <label class="sched-opt" data-val="hourly">
+          <input type="radio" name="schedFreq" value="hourly" style="display:none;">
+          <div class="sched-opt-inner"><i class="bi bi-lightning-charge"></i><span>Every Hour</span></div>
+        </label>
+        <label class="sched-opt" data-val="daily">
+          <input type="radio" name="schedFreq" value="daily" style="display:none;">
+          <div class="sched-opt-inner"><i class="bi bi-sun"></i><span>Daily</span></div>
+        </label>
+        <label class="sched-opt" data-val="weekly">
+          <input type="radio" name="schedFreq" value="weekly" style="display:none;">
+          <div class="sched-opt-inner"><i class="bi bi-calendar-week"></i><span>Weekly</span></div>
+        </label>
+        <label class="sched-opt" data-val="monthly">
+          <input type="radio" name="schedFreq" value="monthly" style="display:none;">
+          <div class="sched-opt-inner"><i class="bi bi-calendar-month"></i><span>Monthly</span></div>
+        </label>
+      </div>
+    </div>
+
+    <div id="scheduleStatus" style="display:none;margin-bottom:1rem;padding:0.6rem 0.9rem;border-radius:6px;font-size:0.82rem;"></div>
+
+    <div id="scheduleNextRun" style="display:none;font-size:0.8rem;color:#8b949e;margin-bottom:1rem;padding:0.5rem 0.75rem;background:#0d1117;border-radius:6px;border-left:2px solid #c9353f;">
+      <i class="bi bi-clock me-1"></i><span id="scheduleNextRunText"></span>
+    </div>
+
+    <div style="display:flex;gap:0.75rem;justify-content:flex-end;flex-wrap:wrap;">
+      <button id="scheduleDisableBtn" onclick="disableSchedule()" style="display:none;background:transparent;border:1px solid #3d4452;color:#8b949e;padding:0.55rem 1.1rem;border-radius:6px;cursor:pointer;font-size:0.875rem;">
+        <i class="bi bi-x-circle me-1"></i>Disable
+      </button>
+      <button onclick="closeScheduleModal()" style="background:transparent;border:1px solid #2d333b;color:#8b949e;padding:0.55rem 1.1rem;border-radius:6px;cursor:pointer;font-size:0.875rem;">Cancel</button>
+      <button onclick="saveSchedule()" id="scheduleSaveBtn" style="background:#c9353f;border:none;color:#fff;padding:0.55rem 1.25rem;border-radius:6px;cursor:pointer;font-size:0.875rem;font-weight:600;">
+        <i class="bi bi-check-circle me-1"></i>Save Schedule
+      </button>
+    </div>
+  </div>
 </div>
 
-<!-- Bulk Validate Modal -->
-<div class="modal fade" id="bulkValidateModal" tabindex="-1" aria-labelledby="bulkValidateModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="bulkValidateModalLabel">
-                    <i class="bi bi-check2-all me-2"></i>Validate All Findings
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <div class="alert alert-info mb-3">
-                    <i class="bi bi-info-circle me-2"></i>
-                    This will validate all findings that haven't been confirmed by the selected model yet.
-                    Findings already validated by this model will be skipped.
-                </div>
-                <div class="mb-3">
-                    <label for="validateModelSelect" class="form-label">Select AI Model</label>
-                    <select class="form-select" id="validateModelSelect" required>
-                        <option value="">Loading models...</option>
-                    </select>
-                </div>
-                <div id="validateStatus" class="alert d-none" role="alert"></div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-info" id="startBulkValidateBtn">
-                    <i class="bi bi-check2-all me-1"></i>Start Validation
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
+<style>
+.sched-opt { cursor:pointer; }
+.sched-opt-inner {
+  display:flex;align-items:center;gap:0.5rem;
+  padding:0.65rem 0.9rem;border-radius:6px;
+  background:#0d1117;border:1px solid #2d333b;
+  color:#8b949e;font-size:0.875rem;transition:all 0.15s;
+}
+.sched-opt-inner i { font-size:1rem; }
+.sched-opt input:checked + .sched-opt-inner,
+.sched-opt.selected .sched-opt-inner {
+  border-color:#c9353f;color:#e6edf3;background:rgba(201,53,63,0.1);
+}
+.sched-opt-inner:hover { border-color:rgba(201,53,63,0.4);color:#e6edf3; }
+</style>
+
+<!-- Scan and Validate modals are rendered via JS (openScanModal / openValidateModal) -->
 
 {% endblock %}
 
@@ -1195,102 +1211,215 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
 
-    // Load AI models when modal opens
-    const scanModal = document.getElementById('startScanModal');
-    const modelSelect = document.getElementById('scanModelSelect');
-    const startScanBtn = document.getElementById('startScanBtn');
-    const scanStatus = document.getElementById('scanStatus');
-    const scanOutput = document.getElementById('scanOutput');
-    const scanOutputText = document.getElementById('scanOutputText');
+    // collapse handlers end here
+});
 
-    // Bulk validation elements
-    const bulkValidateModal = document.getElementById('bulkValidateModal');
-    const validateModelSelect = document.getElementById('validateModelSelect');
-    const startBulkValidateBtn = document.getElementById('startBulkValidateBtn');
-    const validateStatus = document.getElementById('validateStatus');
+// ─── Global helpers & modals (must be global for onclick= attributes) ─────────
+const CSRF_TOKEN = "{{ csrf_token() }}";
 
-    scanModal.addEventListener('show.bs.modal', function() {
-        loadAIModels(modelSelect);
-        scanStatus.classList.add('d-none');
-        scanOutput.classList.add('d-none');
-        startScanBtn.disabled = false;
-    });
+function rcOverlay() {
+        const o = document.createElement('div');
+        o.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.78);display:flex;align-items:center;justify-content:center;z-index:999999';
+        return o;
+    }
+    function rcBox() {
+        const b = document.createElement('div');
+        b.style.cssText = 'background:#161b22;border:1px solid #2d333b;border-top:3px solid #c9353f;border-radius:14px;width:500px;max-width:94vw;box-shadow:0 24px 60px rgba(0,0,0,0.85);color:#e6edf3;font-family:Inter,sans-serif;overflow:hidden';
+        return b;
+    }
+    function showToast(msg, type) {
+        const colors = { success: ['#1f6435','#2ea043'], error: ['#7d1a1a','#c9353f'], warning: ['#7d5a00','#e3b341'], info: ['#0c2d6b','#1f6feb'] };
+        const [bg, border] = colors[type] || colors.info;
+        const t = document.createElement('div');
+        t.style.cssText = `position:fixed;bottom:24px;right:24px;background:${bg};border:1px solid ${border};color:#e6edf3;padding:14px 20px;border-radius:10px;font-family:Inter,sans-serif;font-size:14px;z-index:9999999;max-width:360px;box-shadow:0 8px 24px rgba(0,0,0,0.5);transform:translateX(120%);transition:transform 0.3s ease`;
+        t.textContent = msg;
+        document.body.appendChild(t);
+        requestAnimationFrame(() => { t.style.transform = 'translateX(0)'; });
+        setTimeout(() => { t.style.transform = 'translateX(120%)'; setTimeout(() => t.remove(), 300); }, 4000);
+    }
+    function showConfirm(title, msg, confirmTxt) {
+        return new Promise(resolve => {
+            const overlay = rcOverlay();
+            const box = rcBox();
+            box.innerHTML = `<div style="padding:20px 24px;border-bottom:1px solid #2d333b;display:flex;justify-content:space-between;align-items:center"><span style="font-size:16px;font-weight:600">${title}</span><button id="_rcX" style="background:none;border:none;color:#8b949e;font-size:22px;cursor:pointer;line-height:1">&times;</button></div><div style="padding:20px 24px;font-size:14px;color:#8b949e;line-height:1.6">${msg}</div><div style="padding:16px 24px;border-top:1px solid #2d333b;display:flex;justify-content:flex-end;gap:10px"><button id="_rcNo" style="background:#21262d;border:1px solid #30363d;color:#e6edf3;padding:8px 18px;border-radius:8px;cursor:pointer;font-size:14px">Cancel</button><button id="_rcYes" style="background:#c9353f;border:none;color:#fff;padding:8px 18px;border-radius:8px;cursor:pointer;font-size:14px;font-weight:600">${confirmTxt}</button></div>`;
+            overlay.appendChild(box);
+            document.body.appendChild(overlay);
+            function done(v) { document.body.removeChild(overlay); resolve(v); }
+            box.querySelector('#_rcYes').onclick = () => done(true);
+            box.querySelector('#_rcNo').onclick  = () => done(false);
+            box.querySelector('#_rcX').onclick   = () => done(false);
+            overlay.addEventListener('click', e => { if (e.target === overlay) done(false); });
+        });
+    }
+    function statusBox(el, msg, type) {
+        const colors = { success: ['#1f6435','#2ea043'], error: ['#7d1a1a','#c9353f'], warning: ['#7d5a00','#e3b341'], info: ['#0c2d6b','#1f6feb'] };
+        const [bg, border] = colors[type] || colors.info;
+        el.style.background = bg; el.style.border = `1px solid ${border}`;
+        el.style.whiteSpace = 'pre-line'; el.textContent = msg; el.style.display = 'block';
+    }
 
-    if (bulkValidateModal) {
-        bulkValidateModal.addEventListener('show.bs.modal', function() {
-            loadAIModels(validateModelSelect);
-            validateStatus.classList.add('d-none');
-            startBulkValidateBtn.disabled = false;
-            startBulkValidateBtn.innerHTML = '<i class="bi bi-check2-all me-1"></i>Start Validation';
+    // ─── Scan Modal ───────────────────────────────────────────────────────
+    function openScanModal() {
+        const overlay = rcOverlay();
+        const box = rcBox();
+        box.innerHTML = `
+            <div style="padding:20px 24px;border-bottom:1px solid #2d333b;display:flex;justify-content:space-between;align-items:center">
+                <span style="font-size:16px;font-weight:600">&#9654; Start Security Scan</span>
+                <button id="_sX" style="background:none;border:none;color:#8b949e;font-size:22px;cursor:pointer;line-height:1">&times;</button>
+            </div>
+            <div style="padding:20px 24px">
+                <label style="display:block;margin-bottom:8px;font-size:13px;color:#8b949e">Select AI Model</label>
+                <select id="_sMdl" style="width:100%;background:#0d1117;border:1px solid #30363d;color:#e6edf3;padding:10px 12px;border-radius:8px;font-size:14px">
+                    <option value="">Loading models...</option>
+                </select>
+                <div id="_sStat" style="display:none;margin-top:14px;padding:12px 16px;border-radius:8px;font-size:13px;line-height:1.6"></div>
+                <div id="_sOut" style="display:none;margin-top:14px">
+                    <div style="font-size:12px;color:#8b949e;margin-bottom:6px">Output:</div>
+                    <pre id="_sOutTxt" style="background:#0d1117;border:1px solid #30363d;color:#58a6ff;padding:12px;border-radius:8px;font-size:12px;max-height:180px;overflow-y:auto;margin:0;white-space:pre-wrap"></pre>
+                </div>
+            </div>
+            <div style="padding:16px 24px;border-top:1px solid #2d333b;display:flex;justify-content:flex-end;gap:10px">
+                <button id="_sClose" style="background:#21262d;border:1px solid #30363d;color:#e6edf3;padding:8px 18px;border-radius:8px;cursor:pointer;font-size:14px">Close</button>
+                <button id="_sStart" style="background:#1f6435;border:1px solid #2ea043;color:#fff;padding:8px 20px;border-radius:8px;cursor:pointer;font-size:14px;font-weight:600">&#9654; Start Scan</button>
+            </div>`;
+        overlay.appendChild(box); document.body.appendChild(overlay);
+        const sel = box.querySelector('#_sMdl'), stat = box.querySelector('#_sStat'),
+              out = box.querySelector('#_sOut'), outTxt = box.querySelector('#_sOutTxt'),
+              btn = box.querySelector('#_sStart');
+        function close() { document.body.removeChild(overlay); }
+        box.querySelector('#_sX').onclick = close; box.querySelector('#_sClose').onclick = close;
+        overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+        fetch('/api/ai-models').then(r => r.json()).then(data => {
+            if (!data.models || data.models.length === 0) {
+                sel.innerHTML = '<option value="">-- No AI models configured --</option>';
+                btn.disabled = true;
+                statusBox(stat, 'No AI models configured. Add an API key in Settings.', 'warning');
+                return;
+            }
+            sel.innerHTML = '<option value="">Select an AI Model</option>';
+            data.models.forEach(m => {
+                const o = document.createElement('option'); o.value = m.id;
+                o.textContent = m.vendor + '/' + m.model_name + ' (' + m.api_key_suffix + ')';
+                sel.appendChild(o);
+            });
+        }).catch(() => { sel.innerHTML = '<option value="">Error loading models</option>'; });
+        btn.addEventListener('click', function() {
+            if (!sel.value) { statusBox(stat, 'Please select an AI model', 'warning'); return; }
+            btn.disabled = true; btn.textContent = 'Starting...'; stat.style.display = 'none'; out.style.display = 'none';
+            fetch(`/projects/{{ project.id }}/start-scan`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
+                body: JSON.stringify({ model_id: parseInt(sel.value) })
+            }).then(r => r.json()).then(data => {
+                if (data.success) {
+                    if (data.already_running) {
+                        statusBox(stat, 'Scan is already running', 'info');
+                        if (data.output) { outTxt.textContent = data.output; out.style.display = 'block'; }
+                    } else {
+                        let msg = 'Scan started successfully';
+                        if (data.pid) msg += '\nProcess ID: ' + data.pid;
+                        if (data.log_file) msg += '\nLog: ' + data.log_file;
+                        statusBox(stat, msg, 'success');
+                        showToast('Scan started successfully', 'success');
+                    }
+                } else { statusBox(stat, data.error || 'Failed to start scan', 'error'); }
+                btn.disabled = false; btn.textContent = '▶ Start Scan';
+            }).catch(err => { statusBox(stat, 'Error: ' + err.message, 'error'); btn.disabled = false; btn.textContent = '▶ Start Scan'; });
         });
     }
 
-    function loadAIModels(selectElement) {
-        selectElement.innerHTML = '<option value="">Loading...</option>';
-        fetch('/api/ai-models')
-            .then(response => response.json())
-            .then(data => {
-                if (!data.models || data.models.length === 0) {
-                    selectElement.innerHTML = '<option value="">-- No AI models configured --</option>';
-                    ['startScanBtn','startBulkValidateBtn'].forEach(function(btnId){
-                        var btn = document.getElementById(btnId);
-                        if (btn) { btn.disabled = true; btn.title = 'Add an API key in AI Models first'; }
-                    });
-                    ['scanStatus','validateStatus'].forEach(function(sid){
-                        var el = document.getElementById(sid);
-                        if (el) {
-                            el.className = 'alert alert-warning mt-2';
-                            el.innerHTML = '<i class="bi bi-exclamation-triangle me-2"></i>No AI models configured. <a href="/ai-models">Add an API key</a> to enable scanning.';
-                            el.classList.remove('d-none');
-                        }
-                    });
-                    return;
-                }
-                selectElement.innerHTML = '<option value="">Select an AI Model</option>';
-                data.models.forEach(model => {
-                    const option = document.createElement('option');
-                    option.value = model.id;
-                    option.textContent = model.vendor + '/' + model.model_name + ' (' + model.api_key_suffix + ')';
-                    selectElement.appendChild(option);
-                });
-            })
-            .catch(error => {
-                console.error('Error loading AI models:', error);
-                selectElement.innerHTML = '<option value="">Error loading models</option>';
+    // ─── Bulk Validate Modal ──────────────────────────────────────────────
+    function openValidateModal() {
+        const overlay = rcOverlay();
+        const box = rcBox();
+        box.innerHTML = `
+            <div style="padding:20px 24px;border-bottom:1px solid #2d333b;display:flex;justify-content:space-between;align-items:center">
+                <span style="font-size:16px;font-weight:600">&#10003; Validate All Findings</span>
+                <button id="_vX" style="background:none;border:none;color:#8b949e;font-size:22px;cursor:pointer;line-height:1">&times;</button>
+            </div>
+            <div style="padding:20px 24px">
+                <div style="background:#0c2d6b;border:1px solid #1f6feb;border-radius:8px;padding:12px 16px;font-size:13px;color:#8b949e;margin-bottom:16px;line-height:1.6">
+                    Validates all findings not yet confirmed by the selected model. Already validated findings are skipped.
+                </div>
+                <label style="display:block;margin-bottom:8px;font-size:13px;color:#8b949e">Select AI Model</label>
+                <select id="_vMdl" style="width:100%;background:#0d1117;border:1px solid #30363d;color:#e6edf3;padding:10px 12px;border-radius:8px;font-size:14px">
+                    <option value="">Loading models...</option>
+                </select>
+                <div id="_vStat" style="display:none;margin-top:14px;padding:12px 16px;border-radius:8px;font-size:13px;line-height:1.6"></div>
+            </div>
+            <div style="padding:16px 24px;border-top:1px solid #2d333b;display:flex;justify-content:flex-end;gap:10px">
+                <button id="_vClose" style="background:#21262d;border:1px solid #30363d;color:#e6edf3;padding:8px 18px;border-radius:8px;cursor:pointer;font-size:14px">Cancel</button>
+                <button id="_vStart" style="background:#0c2d6b;border:1px solid #1f6feb;color:#fff;padding:8px 20px;border-radius:8px;cursor:pointer;font-size:14px;font-weight:600">&#10003; Start Validation</button>
+            </div>`;
+        overlay.appendChild(box); document.body.appendChild(overlay);
+        const sel = box.querySelector('#_vMdl'), stat = box.querySelector('#_vStat'), btn = box.querySelector('#_vStart');
+        function close() { document.body.removeChild(overlay); }
+        box.querySelector('#_vX').onclick = close; box.querySelector('#_vClose').onclick = close;
+        overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+        fetch('/api/ai-models').then(r => r.json()).then(data => {
+            if (!data.models || data.models.length === 0) {
+                sel.innerHTML = '<option value="">-- No AI models configured --</option>'; btn.disabled = true;
+                statusBox(stat, 'No AI models configured.', 'warning'); return;
+            }
+            sel.innerHTML = '<option value="">Select an AI Model</option>';
+            data.models.forEach(m => {
+                const o = document.createElement('option'); o.value = m.id;
+                o.textContent = m.vendor + '/' + m.model_name + ' (' + m.api_key_suffix + ')'; sel.appendChild(o);
             });
+        }).catch(() => { sel.innerHTML = '<option value="">Error loading models</option>'; });
+        btn.addEventListener('click', function() {
+            if (!sel.value) { statusBox(stat, 'Please select an AI model', 'warning'); return; }
+            btn.disabled = true; btn.textContent = 'Validating...'; stat.style.display = 'none';
+            fetch(`/api/projects/{{ project.id }}/start-bulk-validation`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
+                body: JSON.stringify({ model_id: parseInt(sel.value) })
+            }).then(r => r.json()).then(data => {
+                if (data.success) {
+                    let msg = `Bulk validation started for ${data.unconfirmed_count} findings`;
+                    if (data.total_findings) msg += ` (out of ${data.total_findings} total)\nRedirecting to status page...`;
+                    statusBox(stat, msg, 'success');
+                    showToast('Bulk validation started', 'success');
+                    setTimeout(() => { window.location.href = '/status'; }, 1500);
+                } else {
+                    statusBox(stat, data.already_running ? 'Bulk validation is already running for this model' : (data.error || 'Failed to start validation'), data.already_running ? 'info' : 'error');
+                    btn.disabled = false; btn.textContent = '✓ Start Validation';
+                }
+            }).catch(err => { statusBox(stat, 'Error: ' + err.message, 'error'); btn.disabled = false; btn.textContent = '✓ Start Validation'; });
+        });
     }
 
     // Handle resync button
     const resyncProjectBtn = document.getElementById('resyncProjectBtn');
     if (resyncProjectBtn) {
-        resyncProjectBtn.addEventListener('click', function() {
-            if (!confirm('Are you sure you want to resync this project? This will remove the current codebase and re-clone it from the git repository. This action cannot be undone.')) {
-                return;
-            }
+        resyncProjectBtn.addEventListener('click', async function() {
+            const ok = await showConfirm(
+                'Resync Project',
+                'This will remove the current codebase and re-clone it from the git repository. This action cannot be undone.',
+                'Resync'
+            );
+            if (!ok) return;
 
             resyncProjectBtn.disabled = true;
             resyncProjectBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Resyncing...';
 
             fetch(`/projects/{{ project.id }}/resync`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                }
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN }
             })
-            .then(response => response.json())
+            .then(r => r.json())
             .then(data => {
                 if (data.success) {
-                    alert('Project resynced successfully! The page will now reload.');
-                    window.location.reload();
+                    showToast('Project resynced successfully! Reloading...', 'success');
+                    setTimeout(() => window.location.reload(), 1500);
                 } else {
-                    alert('Error resyncing project: ' + (data.error || 'Unknown error'));
+                    showToast('Error resyncing: ' + (data.error || 'Unknown error'), 'error');
                     resyncProjectBtn.disabled = false;
                     resyncProjectBtn.innerHTML = '<i class="bi bi-arrow-clockwise me-1"></i>Resync';
                 }
             })
-            .catch(error => {
-                console.error('Error resyncing project:', error);
-                alert('Error resyncing project: ' + error.message);
+            .catch(err => {
+                showToast('Error resyncing: ' + err.message, 'error');
                 resyncProjectBtn.disabled = false;
                 resyncProjectBtn.innerHTML = '<i class="bi bi-arrow-clockwise me-1"></i>Resync';
             });
@@ -1378,133 +1507,9 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    startScanBtn.addEventListener('click', function() {
-        const modelId = modelSelect.value;
-        if (!modelId) {
-            scanStatus.className = 'alert alert-warning';
-            scanStatus.textContent = 'Please select an AI model';
-            scanStatus.classList.remove('d-none');
-            return;
-        }
+    // Scan button handler moved into openScanModal()
 
-        startScanBtn.disabled = true;
-        startScanBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Starting...';
-        scanStatus.classList.add('d-none');
-        scanOutput.classList.add('d-none');
-
-        fetch(`/projects/{{ project.id }}/start-scan`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ model_id: parseInt(modelId) })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                if (data.already_running) {
-                    scanStatus.className = 'alert alert-info';
-                    scanStatus.textContent = 'Scan is already running';
-                    scanStatus.classList.remove('d-none');
-                    if (data.output) {
-                        scanOutputText.textContent = data.output;
-                        scanOutput.classList.remove('d-none');
-                    }
-                } else {
-                    scanStatus.className = 'alert alert-success';
-                    let message = 'Scan started successfully';
-                    if (data.command) {
-                        message += '\n\nCommand: ' + data.command;
-                    }
-                    if (data.pid) {
-                        message += '\nProcess ID: ' + data.pid;
-                    }
-                    if (data.log_file) {
-                        message += '\nLog file: ' + data.log_file;
-                    }
-                    scanStatus.textContent = message;
-                    scanStatus.style.whiteSpace = 'pre-line';
-                    scanStatus.classList.remove('d-none');
-                }
-            } else {
-                scanStatus.className = 'alert alert-danger';
-                scanStatus.textContent = data.error || 'Failed to start scan';
-                scanStatus.classList.remove('d-none');
-            }
-            startScanBtn.disabled = false;
-            startScanBtn.innerHTML = '<i class="bi bi-play-circle me-1"></i>Start Scan';
-        })
-        .catch(error => {
-            console.error('Error starting scan:', error);
-            scanStatus.className = 'alert alert-danger';
-            scanStatus.textContent = 'Error starting scan: ' + error.message;
-            scanStatus.classList.remove('d-none');
-            startScanBtn.disabled = false;
-            startScanBtn.innerHTML = '<i class="bi bi-play-circle me-1"></i>Start Scan';
-        });
-    });
-
-    // Bulk validation button handler
-    if (startBulkValidateBtn) {
-        startBulkValidateBtn.addEventListener('click', function() {
-            const modelId = validateModelSelect.value;
-            if (!modelId) {
-                validateStatus.className = 'alert alert-warning';
-                validateStatus.textContent = 'Please select an AI model';
-                validateStatus.classList.remove('d-none');
-                return;
-            }
-
-            startBulkValidateBtn.disabled = true;
-            startBulkValidateBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Starting...';
-            validateStatus.classList.add('d-none');
-
-            fetch(`/api/projects/{{ project.id }}/start-bulk-validation`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ model_id: parseInt(modelId) })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    validateStatus.className = 'alert alert-success';
-                    let message = `Bulk validation started for ${data.unconfirmed_count} findings`;
-                    if (data.total_findings) {
-                        message += ` (out of ${data.total_findings} total)`;
-                    }
-                    validateStatus.innerHTML = message + '<br><small class="text-muted">Redirecting to status page...</small>';
-                    validateStatus.classList.remove('d-none');
-                    
-                    // Redirect to status page after a short delay
-                    setTimeout(() => {
-                        window.location.href = '/status';
-                    }, 1500);
-                } else {
-                    if (data.already_running) {
-                        validateStatus.className = 'alert alert-info';
-                        validateStatus.textContent = 'Bulk validation is already running for this project with this model';
-                    } else {
-                        validateStatus.className = 'alert alert-danger';
-                        validateStatus.textContent = data.error || 'Failed to start bulk validation';
-                    }
-                    validateStatus.classList.remove('d-none');
-                    startBulkValidateBtn.disabled = false;
-                    startBulkValidateBtn.innerHTML = '<i class="bi bi-check2-all me-1"></i>Start Validation';
-                }
-            })
-            .catch(error => {
-                console.error('Error starting bulk validation:', error);
-                validateStatus.className = 'alert alert-danger';
-                validateStatus.textContent = 'Error starting bulk validation: ' + error.message;
-                validateStatus.classList.remove('d-none');
-                startBulkValidateBtn.disabled = false;
-                startBulkValidateBtn.innerHTML = '<i class="bi bi-check2-all me-1"></i>Start Validation';
-            });
-        });
-    }
-});
+    // Bulk validate handler moved into openValidateModal()
 
 // Add MCP to Cursor button handler
 document.addEventListener('DOMContentLoaded', function() {
@@ -1537,5 +1542,130 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+
+// ── Auto-Scan Schedule ────────────────────────────────────────────────────
+const PROJECT_ID_FOR_SCHED = {{ project.id }};
+const CSRF_FOR_SCHED = "{{ csrf_token() }}";
+
+function openScheduleModal() {
+    const ov = document.getElementById('scheduleModalOverlay');
+    ov.style.display = 'flex';
+    // Load models
+    fetch('/api/ai-models').then(r=>r.json()).then(data=>{
+        const sel = document.getElementById('scheduleModelSel');
+        sel.innerHTML = data.models && data.models.length
+            ? data.models.map(m=>`<option value="${m.id}">${m.vendor}/${m.model_name} (···${m.api_key_suffix})</option>`).join('')
+            : '<option value="">No models configured</option>';
+    }).catch(()=>{});
+    // Load current schedule
+    fetch(`/api/projects/${PROJECT_ID_FOR_SCHED}/schedule`).then(r=>r.json()).then(d=>{
+        if(d.success && d.scan_schedule && d.scan_schedule !== 'none') {
+            // Select the current frequency
+            document.querySelectorAll('.sched-opt').forEach(el=>{
+                el.classList.toggle('selected', el.dataset.val === d.scan_schedule);
+                const radio = el.querySelector('input');
+                if(radio) radio.checked = (el.dataset.val === d.scan_schedule);
+            });
+            // Select current model
+            if(d.auto_scan_model_id) {
+                setTimeout(()=>{ document.getElementById('scheduleModelSel').value = d.auto_scan_model_id; }, 300);
+            }
+            // Show next run
+            if(d.next_scan_at) {
+                const dt = new Date(d.next_scan_at + 'Z');
+                document.getElementById('scheduleNextRunText').textContent = 'Next scan: ' + dt.toLocaleString();
+                document.getElementById('scheduleNextRun').style.display = 'block';
+            }
+            document.getElementById('scheduleDisableBtn').style.display = 'inline-flex';
+        } else {
+            document.getElementById('scheduleNextRun').style.display = 'none';
+            document.getElementById('scheduleDisableBtn').style.display = 'none';
+        }
+    }).catch(()=>{});
+    // Radio click handler
+    document.querySelectorAll('.sched-opt').forEach(el=>{
+        el.onclick = ()=>{
+            document.querySelectorAll('.sched-opt').forEach(x=>x.classList.remove('selected'));
+            el.classList.add('selected');
+            const r = el.querySelector('input'); if(r) r.checked = true;
+        };
+    });
+}
+
+function closeScheduleModal() {
+    document.getElementById('scheduleModalOverlay').style.display = 'none';
+    document.getElementById('scheduleStatus').style.display = 'none';
+}
+
+function _scheduleStatusMsg(msg, type) {
+    const el = document.getElementById('scheduleStatus');
+    el.style.display = 'block';
+    el.style.background = type === 'success' ? 'rgba(46,160,67,0.15)' : 'rgba(201,53,63,0.15)';
+    el.style.color = type === 'success' ? '#3fb950' : '#ff7b7b';
+    el.style.border = '1px solid ' + (type === 'success' ? 'rgba(46,160,67,0.3)' : 'rgba(201,53,63,0.3)');
+    el.textContent = msg;
+}
+
+function saveSchedule() {
+    const sel = document.getElementById('scheduleModelSel');
+    const model_id = sel.value;
+    const freq = document.querySelector('.sched-opt.selected')?.dataset.val
+               || document.querySelector('input[name="schedFreq"]:checked')?.value;
+    if(!freq) { _scheduleStatusMsg('Please select a frequency.', 'error'); return; }
+    if(!model_id) { _scheduleStatusMsg('Please select an AI model.', 'error'); return; }
+    const btn = document.getElementById('scheduleSaveBtn');
+    btn.disabled = true; btn.textContent = 'Saving...';
+    fetch(`/api/projects/${PROJECT_ID_FOR_SCHED}/schedule`, {
+        method: 'POST',
+        headers: {'Content-Type':'application/json','X-CSRFToken': CSRF_FOR_SCHED},
+        body: JSON.stringify({schedule: freq, model_id: parseInt(model_id)})
+    }).then(r=>r.json()).then(d=>{
+        if(d.success) {
+            _scheduleStatusMsg('Schedule saved! ' + (d.next_scan_at ? 'Next: ' + new Date(d.next_scan_at + 'Z').toLocaleString() : ''), 'success');
+            document.getElementById('scheduleActiveBadge').style.display = 'inline';
+            document.getElementById('scheduleDisableBtn').style.display = 'inline-flex';
+            if(d.next_scan_at) {
+                document.getElementById('scheduleNextRunText').textContent = 'Next scan: ' + new Date(d.next_scan_at + 'Z').toLocaleString();
+                document.getElementById('scheduleNextRun').style.display = 'block';
+            }
+            setTimeout(closeScheduleModal, 2000);
+        } else {
+            _scheduleStatusMsg(d.error || 'Failed to save schedule.', 'error');
+        }
+    }).catch(e=>{ _scheduleStatusMsg('Network error: ' + e.message, 'error'); })
+    .finally(()=>{ btn.disabled = false; btn.innerHTML = '<i class="bi bi-check-circle me-1"></i>Save Schedule'; });
+}
+
+function disableSchedule() {
+    if(!confirm('Disable auto-scan for this project?')) return;
+    fetch(`/api/projects/${PROJECT_ID_FOR_SCHED}/schedule`, {
+        method: 'DELETE',
+        headers: {'X-CSRFToken': CSRF_FOR_SCHED}
+    }).then(r=>r.json()).then(d=>{
+        if(d.success) {
+            document.getElementById('scheduleActiveBadge').style.display = 'none';
+            document.getElementById('scheduleDisableBtn').style.display = 'none';
+            document.getElementById('scheduleNextRun').style.display = 'none';
+            document.querySelectorAll('.sched-opt').forEach(x=>x.classList.remove('selected'));
+            _scheduleStatusMsg('Auto-scan disabled.', 'success');
+            setTimeout(closeScheduleModal, 1500);
+        } else { _scheduleStatusMsg(d.error || 'Failed to disable.', 'error'); }
+    }).catch(e=>{ _scheduleStatusMsg('Network error.', 'error'); });
+}
+
+// Show badge on load if schedule is active
+document.addEventListener('DOMContentLoaded', ()=>{
+    fetch(`/api/projects/${PROJECT_ID_FOR_SCHED}/schedule`).then(r=>r.json()).then(d=>{
+        if(d.success && d.scan_schedule && d.scan_schedule !== 'none') {
+            document.getElementById('scheduleActiveBadge').style.display = 'inline';
+        }
+    }).catch(()=>{});
+});
+
+// Close modal on overlay click
+document.getElementById('scheduleModalOverlay').addEventListener('click', function(e){
+    if(e.target === this) closeScheduleModal();
+});
+
 </script>
 {% endblock %}

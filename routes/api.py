@@ -9,9 +9,68 @@ from utils.project_utils import validate_git_url, is_zip_file
 from werkzeug.utils import secure_filename
 import os
 import logging
+import time as _time
+from collections import defaultdict
 from datetime import datetime
 
 logger = logging.getLogger(__name__)
+
+# ── Simple in-memory rate limiter (per IP) ────────────────────────────────────
+_rl_store: dict = defaultdict(list)
+
+def _get_client_ip():
+    return request.headers.get("X-Real-IP", request.remote_addr) or "unknown"
+
+def _rate_limit(key_prefix: str, max_calls: int, window_secs: int):
+    """Returns (allowed: bool, retry_after: int seconds).
+    key_prefix allows separate buckets per endpoint.
+    """
+    ip = _get_client_ip()
+    key = f"{key_prefix}:{ip}"
+    now = _time.time()
+    calls = [t for t in _rl_store[key] if now - t < window_secs]
+    _rl_store[key] = calls
+    if len(calls) >= max_calls:
+        wait = int(window_secs - (now - calls[0])) + 1
+        return False, max(wait, 1)
+    _rl_store[key].append(now)
+    return True, 0
+
+# ── Safe API key masker ────────────────────────────────────────────────────────
+def _mask_key(key: str) -> str:
+    """Always return masked key — never expose full key in API response."""
+    if not key:
+        return "****"
+    k = key.strip()
+    if len(k) >= 8:
+        return "*" * (len(k) - 4) + k[-4:]
+    return "****"
+
+# ── Path traversal guard ───────────────────────────────────────────────────────
+_ALLOWED_PATH_ROOTS = None
+
+def _get_allowed_roots():
+    global _ALLOWED_PATH_ROOTS
+    if _ALLOWED_PATH_ROOTS is None:
+        project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        _ALLOWED_PATH_ROOTS = [
+            os.path.realpath(os.path.join(project_root, 'codebases')),
+            os.path.realpath(os.path.join(project_root, 'uploads')),
+        ]
+    return _ALLOWED_PATH_ROOTS
+
+def _is_safe_path(path: str) -> bool:
+    """Return True only if resolved path is inside an allowed root directory."""
+    if not path:
+        return False
+    try:
+        resolved = os.path.realpath(path)
+        for root in _get_allowed_roots():
+            if resolved.startswith(root + os.sep) or resolved == root:
+                return True
+        return False
+    except Exception:
+        return False
 
 
 @api_bp.route('/ai-models', methods=['GET', 'POST'])
@@ -35,6 +94,9 @@ def api_ai_models():
     
     elif request.method == 'POST':
         """Add AI models for a vendor - automatically discovers and adds all suitable models"""
+        allowed, retry = _rate_limit('add_model', 10, 60)
+        if not allowed:
+            return jsonify({'success': False, 'error': f'Rate limit exceeded. Try again in {retry}s.'}), 429
         try:
             data = request.get_json()
             if not data or not data.get('vendor') or not data.get('api_key'):
@@ -83,20 +145,14 @@ def api_ai_model_by_id(model_id):
                 return jsonify({'success': False, 'error': 'Model not found'})
             
             if request.method == 'GET':
-                """Get AI model data"""
-                # Only admins may retrieve the full API key; others see only last 4 chars
-                if current_user.is_admin:
-                    exposed_key = model.api_key
-                else:
-                    k = model.api_key or ""
-                    exposed_key = ("*" * (len(k) - 4) + k[-4:]) if len(k) >= 4 else "****"
+                """Get AI model data — key always masked in API response"""
                 return jsonify({
-                    'success': True, 
+                    'success': True,
                     'model': {
-                        'id': model.id, 
-                        'model_name': model.model_name, 
+                        'id': model.id,
+                        'model_name': model.model_name,
                         'vendor': model.vendor,
-                        'api_key': exposed_key,
+                        'api_key': _mask_key(model.api_key),
                         'created_at': model.created_at.isoformat() if model.created_at else None
                     }
                 })
@@ -647,6 +703,9 @@ def test_model_connection():
 @login_required
 def validate_api_key_endpoint():
     """Validate API key format without making expensive API calls (cheap validation)"""
+    allowed, retry = _rate_limit('validate_key', 20, 60)
+    if not allowed:
+        return jsonify({'success': False, 'error': f'Rate limit exceeded. Try again in {retry}s.'}), 429
     try:
         data = request.get_json()
         vendor = data.get('vendor')
@@ -729,6 +788,9 @@ def api_check_confirmation_exists(finding_id, model_id):
 @login_required
 def api_start_validation(finding_id):
     """Start validation for a finding in background"""
+    allowed, retry = _rate_limit('start_validation', 30, 60)
+    if not allowed:
+        return jsonify({'success': False, 'error': f'Rate limit exceeded. Try again in {retry}s.'}), 429
     try:
         import subprocess
         import sys
@@ -993,6 +1055,9 @@ def api_start_validation(finding_id):
 @api_bp.route('/projects/<int:project_id>/start-bulk-validation', methods=['POST'])
 @login_required
 def api_start_bulk_validation(project_id):
+    allowed, retry = _rate_limit('bulk_validation', 5, 60)
+    if not allowed:
+        return jsonify({'success': False, 'error': f'Rate limit exceeded. Try again in {retry}s.'}), 429
     """Start validation for all unconfirmed findings in a project"""
     try:
         import subprocess
@@ -1168,10 +1233,160 @@ def api_start_bulk_validation(project_id):
 
 
 
-@api_bp.route('/projects/<int:project_id>/scan-complete', methods=['POST'])
+
+
+
+# ── Notification endpoints ────────────────────────────────────────────────────
+
+@api_bp.route('/notifications', methods=['GET'])
 @login_required
+def api_get_notifications():
+    """Get unread (and recent) notifications for current user."""
+    try:
+        from db.models import Notification
+        orm = get_orm_instance()
+        with orm.get_session() as session:
+            limit = min(int(request.args.get('limit', 20)), 50)
+            rows = (
+                session.query(Notification)
+                .filter_by(user_id=current_user.id)
+                .order_by(Notification.created_at.desc())
+                .limit(limit)
+                .all()
+            )
+            unread_count = (
+                session.query(Notification)
+                .filter_by(user_id=current_user.id, is_read=False)
+                .count()
+            )
+            return jsonify({
+                'success': True,
+                'unread_count': unread_count,
+                'notifications': [{
+                    'id':         n.id,
+                    'type':       n.type.value if hasattr(n.type, 'value') else str(n.type),
+                    'title':      n.title,
+                    'message':    n.message,
+                    'is_read':    n.is_read,
+                    'link':       n.link,
+                    'created_at': n.created_at.isoformat() if n.created_at else None,
+                } for n in rows],
+            })
+    except Exception as e:
+        logger.error(f'Error fetching notifications: {e}')
+        return jsonify({'success': False, 'notifications': [], 'unread_count': 0})
+
+
+@api_bp.route('/notifications/<int:notif_id>/read', methods=['POST'])
+@login_required
+def api_mark_notification_read(notif_id):
+    """Mark a single notification as read."""
+    try:
+        from db.models import Notification
+        orm = get_orm_instance()
+        with orm.get_session() as session:
+            n = session.query(Notification).filter_by(id=notif_id, user_id=current_user.id).first()
+            if n:
+                n.is_read = True
+                session.flush()
+        return jsonify({'success': True})
+    except Exception as e:
+        logger.error(f'Error marking notification read: {e}')
+        return jsonify({'success': False})
+
+
+@api_bp.route('/notifications/read-all', methods=['POST'])
+@login_required
+def api_mark_all_notifications_read():
+    """Mark all notifications for current user as read."""
+    try:
+        from db.models import Notification
+        orm = get_orm_instance()
+        with orm.get_session() as session:
+            session.query(Notification).filter_by(user_id=current_user.id, is_read=False).update({'is_read': True})
+        return jsonify({'success': True})
+    except Exception as e:
+        logger.error(f'Error marking all notifications read: {e}')
+        return jsonify({'success': False})
+
+
+@api_bp.route('/projects/<int:project_id>/schedule', methods=['GET', 'POST', 'DELETE'])
+@login_required
+def api_project_schedule(project_id):
+    """Get, set, or remove the auto-scan schedule for a project."""
+    from utils.auto_scheduler import set_project_schedule
+    from db.models import Project as _Project
+
+    orm = get_orm_instance()
+    with orm.get_session() as session:
+        project = session.query(_Project).filter_by(id=project_id).first()
+        if not project:
+            return jsonify({'success': False, 'error': 'Project not found'}), 404
+        if project.owner_id is not None and project.owner_id != current_user.id and not current_user.is_admin:
+            return jsonify({'success': False, 'error': 'Access denied'}), 403
+
+        if request.method == 'GET':
+            return jsonify({
+                'success': True,
+                'scan_schedule': project.scan_schedule,
+                'next_scan_at': project.next_scan_at.isoformat() if project.next_scan_at else None,
+                'auto_scan_model_id': project.auto_scan_model_id,
+            })
+
+        elif request.method == 'DELETE':
+            result = set_project_schedule(project_id, 'none', 0, current_user.id)
+            return jsonify(result)
+
+        elif request.method == 'POST':
+            data = request.get_json() or {}
+            schedule = data.get('schedule', 'none')
+            model_id = data.get('model_id')
+            if not model_id and schedule != 'none':
+                return jsonify({'success': False, 'error': 'model_id is required'}), 400
+            allowed, retry = _rate_limit('set_schedule', 20, 60)
+            if not allowed:
+                return jsonify({'success': False, 'error': f'Rate limit exceeded. Retry in {retry}s.'}), 429
+            result = set_project_schedule(project_id, schedule, int(model_id or 0), current_user.id)
+            code = 200 if result.get('success') else 400
+            return jsonify(result), code
+
+
+
+@api_bp.route('/projects/<int:project_id>/reset-cost', methods=['POST'])
+@login_required
+def api_reset_project_cost(project_id):
+    """Reset project cost counter — admin only"""
+    if not current_user.is_admin:
+        return jsonify({'success': False, 'error': 'Admin access required'}), 403
+    try:
+        orm = get_orm_instance()
+        with orm.get_session() as session:
+            project = orm.get_by_id(session, Project, project_id)
+            if not project:
+                return jsonify({'success': False, 'error': 'Project not found'}), 404
+            # Ownership or admin check
+            if project.owner_id and project.owner_id != current_user.id and not current_user.is_admin:
+                return jsonify({'success': False, 'error': 'Access denied'}), 403
+            old_cost = project.cost or 0
+            project.cost = 0.0
+            session.commit()
+            logger.info(f'Cost reset for project {project_id} by admin {current_user.username} (was ${old_cost:.4f})')
+            return jsonify({'success': True, 'message': f'Cost reset from ${old_cost:.2f} to $0.00'})
+    except Exception as e:
+        logger.error(f'Error resetting project cost: {e}')
+        return jsonify({'success': False, 'error': 'Internal error'}), 500
+
+
+@api_bp.route('/projects/<int:project_id>/scan-complete', methods=['POST'])
 def api_scan_complete(project_id):
-    """Notify scan completion - called by scan subprocess"""
+    """Notify scan completion - called by scan subprocess (internal) or logged-in user"""
+    # Allow internal calls from the scan subprocess via a shared key
+    internal_key = request.headers.get('X-Internal-Key', '')
+    if internal_key != 'scanner-internal':
+        # Fall back to login check for external calls
+        from flask_login import current_user
+        if not current_user.is_authenticated:
+            return jsonify({'success': False, 'error': 'Unauthorized'}), 401
     try:
         orm = get_orm_instance()
         with orm.get_session() as session:
@@ -1183,11 +1398,18 @@ def api_scan_complete(project_id):
             if project.owner_id:
                 from db.models import User
                 owner = session.query(User).filter_by(id=project.owner_id).first()
+                findings = project.findings or []
+                total = len(findings)
+                critical = sum(1 for f in findings if hasattr(f.severity, 'value') and f.severity.value == 'critical')
+                # In-app notification
+                try:
+                    from utils.notifications import notify_scan_complete as _notif_complete
+                    _notif_complete(project_id, project.name, project.owner_id, total, critical)
+                except Exception as _ne:
+                    logger.warning(f'In-app scan complete notification failed: {_ne}')
+                # Email notification
                 if owner and owner.email and owner.notify_scan_complete:
                     from utils.email_notifications import notify_scan_complete
-                    findings = project.findings or []
-                    total = len(findings)
-                    critical = sum(1 for f in findings if hasattr(f.severity, 'value') and f.severity.value == 'critical')
                     try:
                         notify_scan_complete(owner.email, project.name, total, critical, project_id)
                     except Exception as notify_err:

@@ -18,7 +18,10 @@ def summarize_page():
     try:
         orm = get_orm_instance()
         with orm.get_session() as session:
-            projects = orm.get_all(session, Project)
+            if current_user.is_admin:
+                projects = orm.get_all(session, Project)
+            else:
+                projects = session.query(Project).filter(Project.owner_id == current_user.id).all()
             models = orm.get_all(session, AIModel)
 
             if request.method == 'GET':
@@ -155,5 +158,5 @@ def summarize_page():
         flash('Error generating summary', 'error')
         orm = get_orm_instance()
         with orm.get_session() as session:
-            return render_template('summarize.html', projects=orm.get_all(session, Project), models=orm.get_all(session, AIModel), summary_text=None)
+            return render_template('summarize.html', projects=(orm.get_all(session, Project) if current_user.is_admin else session.query(Project).filter(Project.owner_id == current_user.id).all()), models=orm.get_all(session, AIModel), summary_text=None)
 

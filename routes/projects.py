@@ -13,6 +13,23 @@ from werkzeug.utils import secure_filename
 import os
 import sys
 import uuid
+from sqlalchemy.orm.attributes import flag_modified
+
+# ── Path traversal guard ───────────────────────────────────────────────────────
+def _is_safe_project_path(path: str) -> bool:
+    """Ensure path resolves within allowed codebases/ or uploads/ directories."""
+    if not path:
+        return False
+    try:
+        project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        allowed_roots = [
+            os.path.realpath(os.path.join(project_root, 'codebases')),
+            os.path.realpath(os.path.join(project_root, 'uploads')),
+        ]
+        resolved = os.path.realpath(path)
+        return any(resolved.startswith(r + os.sep) or resolved == r for r in allowed_roots)
+    except Exception:
+        return False
 import shutil
 import logging
 import subprocess
@@ -402,24 +419,20 @@ def edit_project(project_id):
                 project.max_cost = float(max_cost) if max_cost else None
                 
                 # Update included directories
-                included_dirs = request.form.get('included_dirs', '')
-                if included_dirs:
-                    # Split by comma and filter out empty strings
-                    project.included_dirs = [d.strip() for d in included_dirs.split(',') if d.strip()]
+                included_dirs_raw = request.form.get('included_dirs', '')
+                if included_dirs_raw:
+                    project.included_dirs = [d.strip() for d in included_dirs_raw.split(',') if d.strip()]
                 else:
-                    # Empty string means user cleared all selections
                     project.included_dirs = []
-                
+                flag_modified(project, 'included_dirs')
+
                 # Update excluded directories
-                # The hidden input is always initialized with current excluded_dirs on page load
-                # If it's empty, it means user cleared all selections (which is valid)
-                excluded_dirs = request.form.get('excluded_dirs', '')
-                if excluded_dirs:
-                    # Split by comma and filter out empty strings
-                    project.excluded_dirs = [d.strip() for d in excluded_dirs.split(',') if d.strip()]
+                excluded_dirs_raw = request.form.get('excluded_dirs', '')
+                if excluded_dirs_raw:
+                    project.excluded_dirs = [d.strip() for d in excluded_dirs_raw.split(',') if d.strip()]
                 else:
-                    # Empty string means user cleared all selections
                     project.excluded_dirs = []
+                flag_modified(project, 'excluded_dirs')
                 
                 # Update AI models
                 ai_models = request.form.getlist('ai_models')
@@ -472,6 +485,10 @@ def delete_project(project_id):
             # Delete codebase files (base_path contains the extracted/cloned codebase)
             if project.base_path and os.path.exists(project.base_path):
                 try:
+                    # Path traversal guard — only delete within allowed directories
+                    if not _is_safe_project_path(project.base_path):
+                        logger.warning(f"Blocked unsafe base_path deletion attempt: {project.base_path}")
+                        raise ValueError("Project path is outside allowed directories")
                     shutil.rmtree(project.base_path)
                     logger.info(f"Deleted codebase directory: {project.base_path}")
                     
@@ -828,7 +845,15 @@ def start_scan(project_id):
                     pass
                 
                 logger.info(f"Process started. Shell PID: {process.pid}, Run Forever PID: {actual_pid}")
-                
+
+                # In-app notification: scan started
+                try:
+                    if project.owner_id:
+                        from utils.notifications import notify_scan_started as _notif_start
+                        _notif_start(project_id, project.name, project.owner_id)
+                except Exception as _ne:
+                    logger.warning(f'Scan started notification failed: {_ne}')
+
                 # Build display command (the actual command that runs)
                 display_command = base_command
                 

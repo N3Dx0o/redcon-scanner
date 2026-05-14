@@ -95,6 +95,10 @@ def findings_list():
                 joinedload(Finding.project), 
                 joinedload(Finding.confirmations).joinedload(Confirmation.model)
             )
+
+            # Scope to current user's projects (admins see all)
+            if not current_user.is_admin:
+                query = query.filter(Project.owner_id == current_user.id)
             
             # Basic filters
             if severity:
@@ -188,10 +192,16 @@ def findings_list():
             insights = calculate_findings_insights(findings)
             
             # Get all findings for global insights (unfiltered count)
-            all_findings = session.query(Finding).options(joinedload(Finding.confirmations)).all()
+            all_q = session.query(Finding).join(Finding.project).options(joinedload(Finding.confirmations))
+            if not current_user.is_admin:
+                all_q = all_q.filter(Project.owner_id == current_user.id)
+            all_findings = all_q.all()
             global_insights = calculate_findings_insights(all_findings)
-            
-            projects = orm.get_all(session, Project)
+
+            if current_user.is_admin:
+                projects = orm.get_all(session, Project)
+            else:
+                projects = session.query(Project).filter(Project.owner_id == current_user.id).all()
             
             # Get unique file paths for autocomplete
             file_paths = session.query(Finding.file_path).distinct().all()
@@ -243,7 +253,11 @@ def findings_navigate():
             
             # Build query with relationships
             query = session.query(Finding).join(Finding.project).options(joinedload(Finding.project))
-            
+
+            # Scope to current user's projects
+            if not current_user.is_admin:
+                query = query.filter(Project.owner_id == current_user.id)
+
             if severity:
                 query = query.filter(Finding.severity == severity)
             if status:
@@ -256,7 +270,10 @@ def findings_navigate():
             findings = query.order_by(Finding.created_at.desc()).all()
             
             if not findings:
-                projects = orm.get_all(session, Project)
+                if current_user.is_admin:
+                    projects = orm.get_all(session, Project)
+                else:
+                    projects = session.query(Project).filter(Project.owner_id == current_user.id).all()
                 return render_template('findings_navigate.html', 
                                      findings=[], 
                                      current_finding=None, 
@@ -285,8 +302,11 @@ def findings_navigate():
             current_finding.confirmations = confirmations
             
             # Get all projects for filter dropdown
-            projects = orm.get_all(session, Project)
-            
+            if current_user.is_admin:
+                projects = orm.get_all(session, Project)
+            else:
+                projects = session.query(Project).filter(Project.owner_id == current_user.id).all()
+
             return render_template('findings_navigate.html', 
                                  findings=findings, 
                                  current_finding=current_finding, 
@@ -324,6 +344,10 @@ def finding_detail(finding_id):
             finding = orm.get_by_id_with_relations(session, Finding, finding_id, ['project'])
             if not finding:
                 flash('Finding not found', 'error')
+                return redirect(url_for('findings.findings_list'))
+            # Security: ensure user owns the project this finding belongs to
+            if not current_user.is_admin and finding.project and finding.project.owner_id != current_user.id:
+                flash('Access denied', 'error')
                 return redirect(url_for('findings.findings_list'))
             
             # Load confirmations with their model relationships

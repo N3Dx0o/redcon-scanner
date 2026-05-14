@@ -62,8 +62,15 @@ def index():
                 projects = base_q.all()
             else:
                 projects = base_q.filter(Project.owner_id == current_user.id).all()
-            findings = orm.get_all(session, Finding)
-            
+            # Scope findings to current user's projects (admins see all)
+            if current_user.is_admin:
+                findings = orm.get_all(session, Finding)
+            else:
+                from sqlalchemy.orm import joinedload as _jl
+                findings = session.query(Finding).join(Finding.project).filter(
+                    Project.owner_id == current_user.id
+                ).all()
+
             # Calculate global stats
             findings_count = len(findings)
             total_cost = sum(project.cost or 0 for project in projects)

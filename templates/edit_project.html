@@ -74,9 +74,16 @@
                                         <label for="cost" class="form-label fw-bold">
                                             <i class="bi bi-cash-stack me-1"></i>Current Cost (USD)
                                         </label>
-                                        <input type="number" class="form-control bg-body-secondary" id="cost" name="cost" 
-                                               value="{{ project.cost or '0.00' }}" step="0.01" min="0" readonly>
-                                        <div class="form-text">Total cost spent so far</div>
+                                        <div class="input-group">
+                                            <input type="number" class="form-control bg-body-secondary" id="cost" name="cost"
+                                                   value="{{ project.cost or '0.00' }}" step="0.01" min="0" readonly>
+                                            {% if current_user.is_admin %}
+                                            <button type="button" class="btn btn-outline-danger btn-sm" onclick="resetCost()" title="Reset cost to $0.00">
+                                                <i class="bi bi-arrow-counterclockwise me-1"></i>Reset
+                                            </button>
+                                            {% endif %}
+                                        </div>
+                                        <div class="form-text">Total cost spent so far {% if current_user.is_admin %}<span class="text-danger">(Admins can reset)</span>{% endif %}</div>
                             </div>
                         </div>
                         
@@ -948,5 +955,24 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }, 100);
 });
+
+    function resetCost() {
+        if (!confirm('Reset cost counter to $0.00? This allows new scans to run within the budget limit.')) return;
+        const projectId = window.location.pathname.split('/')[2];
+        fetch('/api/projects/' + projectId + '/reset-cost', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'X-CSRFToken': document.querySelector('[name=csrf_token]').value}
+        })
+        .then(r => r.json())
+        .then(d => {
+            if (d.success) {
+                document.getElementById('cost').value = '0.00';
+                alert('Cost reset successfully. You can now run new scans.');
+            } else {
+                alert('Error: ' + (d.error || 'Unknown error'));
+            }
+        })
+        .catch(e => alert('Request failed: ' + e));
+    }
 </script>
 {% endblock %}
