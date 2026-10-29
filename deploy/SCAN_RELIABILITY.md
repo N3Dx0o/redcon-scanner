@@ -11,7 +11,9 @@ Manual project scans and scheduled scans enter `scan_jobs.db`. A single
   time, terminated, and interrupted jobs requeued within the attempt limit.
   Recovery starts the scan again; it does not resume the AI reasoning state.
 - Repeated SDK payment/authentication errors stop promptly even if the AI
-  library swallows them. Logs stop at 128 MB per job.
+  library swallows them. Temporary failures receive a 30-second recovery grace
+  period, reset by successful agent progress, so historical errors cannot cancel
+  a recovered scan. Logs stop at 128 MB per job.
 - Each job has its own append-only log in `logs/jobs/<job-id>.log`.
 - The project page displays queue state, attempts and target counts. It never
   invents a percentage for AI analysis. Cancellation terminates the process group.

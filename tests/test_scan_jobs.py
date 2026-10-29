@@ -126,9 +126,14 @@ class QueueTests(unittest.TestCase):
 
     def test_repeated_rate_limit_retries_with_bound(self):
         code = "print('Error code: 429', flush=True); print('Error code: 429', flush=True); import time; time.sleep(30)"
-        job = self.run_child(code)
+        job = self.run_child(code, transient_grace=.05)
         self.assertEqual(job['state'], 'retry_wait')
         self.assertIn('rate limit', job['error'])
+
+    def test_recovered_provider_error_does_not_fail_successful_scan(self):
+        code = "print('Error code: 503', flush=True); print('Error code: 503', flush=True); import time; time.sleep(.15); print('📊 [step 2] [usage cost=0.001]', flush=True); time.sleep(.1)"
+        job = self.run_child(code, transient_grace=.2)
+        self.assertEqual(job['state'], 'completed')
 
     def test_revalidation_failure_never_starts_child(self):
         job = self.queue.claim()

@@ -72,7 +72,7 @@ def provider_failure(text):
     return None
 
 
-def execute(queue, job, *, command=None, validate=validate_job, timeout=7200, poll=1):
+def execute(queue, job, *, command=None, validate=validate_job, timeout=7200, poll=1, transient_grace=30):
     """Run in a process group; cancellation, timeout and shutdown terminate descendants."""
     proc = None
     try:
@@ -91,6 +91,7 @@ def execute(queue, job, *, command=None, validate=validate_job, timeout=7200, po
             began = time.monotonic()
             cancelled = timed_out = False
             failure = None
+            transient_since = None
             while proc.poll() is None:
                 current = queue.get(job['id'])
                 cancelled = bool(current['cancel_requested'])
@@ -101,7 +102,20 @@ def execute(queue, job, *, command=None, validate=validate_job, timeout=7200, po
                 with path.open('rb') as stream:
                     stream.seek(max(0, path.stat().st_size - 8192))
                     text = stream.read().decode('utf-8', 'replace').rsplit('Attempt ', 1)[-1]
-                failure = provider_failure(text)
+                # An SDK traceback can repeat one response several times. Also,
+                # historical failures must not cancel a subsequently healthy scan.
+                latest_progress = max(text.rfind(marker) for marker in
+                                      ('📊 [step', '🛠️', 'Agent completed for target:'))
+                recent = text[latest_progress:] if latest_progress >= 0 else text
+                candidate = provider_failure(recent)
+                failure = candidate
+                if candidate and candidate[0] == 75:
+                    if transient_since is None:
+                        transient_since = time.monotonic()
+                    if time.monotonic() - transient_since < transient_grace:
+                        failure = None
+                else:
+                    transient_since = None
                 if path.stat().st_size >= 128 * 1024 * 1024:
                     failure = (1, 'Scan stopped because its diagnostic log exceeded 128 MB')
                 if failure:
