@@ -133,3 +133,6 @@ gunicorn.ctl
 # Compiled Python in subdirs
 **/__pycache__/
 **/*.pyc
+
+# Durable scan worker runtime lock
+/scan_jobs.db.worker.lock
