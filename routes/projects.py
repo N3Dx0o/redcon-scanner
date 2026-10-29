@@ -605,278 +605,62 @@ def resync_project(project_id):
         }), 500
 
 
+def _scan_project_access(session, project_id):
+    project = session.query(Project).filter_by(id=project_id).first()
+    if not project or (not current_user.is_admin and project.owner_id != current_user.id):
+        return None
+    return project
+
+
 @projects_bp.route('/projects/<int:project_id>/start-scan', methods=['POST'])
 @login_required
 def start_scan(project_id):
-    """Start a security scan for a project"""
-    try:
-        data = request.get_json()
-        model_id = data.get('model_id')
-        
-        if not model_id:
-            return jsonify({'success': False, 'error': 'Model ID is required'}), 400
+    """Enqueue once, atomically; a worker runs it independently of web requests."""
+    from utils.scan_jobs import Queue, public_job
+    data = request.get_json(silent=True) or {}
+    if not isinstance(data, dict):
+        return jsonify(success=False, error='A JSON object is required'), 400
+    model_id = data.get('model_id')
+    if type(model_id) is not int or model_id <= 0:
+        return jsonify(success=False, error='A valid model ID is required'), 400
+    with get_orm_instance().get_session() as session:
+        project = _scan_project_access(session, project_id)
+        if not project:
+            return jsonify(success=False, error='Project not found'), 404
+        model = session.query(AIModel).filter_by(id=model_id).first()
+        if not model or (not current_user.is_admin and model.owner_id != current_user.id):
+            return jsonify(success=False, error='AI model not found'), 404
+        if float(project.cost or 0) >= float(project.max_cost if project.max_cost is not None else 50):
+            return jsonify(success=False, error='Project spending limit reached'), 400
+        # Refuse overlapping with legacy scans started before this release.
+        from utils.auto_scheduler import _is_any_scan_running
+        if _is_any_scan_running(project_id):
+            return jsonify(success=True, already_running=True, message='A scan is already running')
+        job, created = Queue().enqueue(project_id, model_id, current_user.id)
+        return jsonify(success=True, already_running=not created,
+                       message='Scan queued' if created else 'Scan is already queued or running',
+                       job=public_job(job)), 202 if created else 200
 
-        # Block scan if no AI models exist at all
-        _orm_check = get_orm_instance()
-        with _orm_check.get_session() as _sess:
-            from db.models import AIModel as _AIModel
-            _model_count = _sess.query(_AIModel).count()
-        if _model_count == 0:
-            return jsonify({
-                'success': False,
-                'error': 'No AI models configured. Please add an API key in AI Models settings before scanning.'
-            }), 400
-        
-        orm = get_orm_instance()
-        with orm.get_session() as session:
-            project = orm.get_by_id(session, Project, project_id)
-            if not project:
-                return jsonify({'success': False, 'error': 'Project not found'}), 404
-            # Ownership check (multi-tenancy)
-            if project.owner_id is not None and project.owner_id != current_user.id and not current_user.is_admin:
-                return jsonify({'success': False, 'error': 'Access denied'}), 403
-            
-            model = orm.get_by_id(session, AIModel, model_id)
-            if not model:
-                return jsonify({'success': False, 'error': 'AI Model not found'}), 404
-            
-            # Check if project's max_cost has already been exceeded
-            try:
-                project_max_cost = float(project.max_cost) if project.max_cost else 50.0
-            except (TypeError, ValueError, AttributeError):
-                project_max_cost = 50.0
-            
-            current_cost = 0.0
-            if hasattr(project, "cost") and project.cost is not None:
-                try:
-                    current_cost = float(project.cost)
-                except (TypeError, ValueError, AttributeError):
-                    current_cost = 0.0
-            
-            if current_cost >= project_max_cost:
-                return jsonify({
-                    'success': False,
-                    'error': f'Cannot start scan: Maximum cost limit exceeded. Current cost (${current_cost:.2f}) >= Maximum allowed cost (${project_max_cost:.2f}). Please increase the maximum cost limit in project settings to continue scanning.'
-                }), 400
-            
-            # Build the command
-            base_dir = os.path.dirname(os.path.abspath(__file__))
-            project_root = os.path.dirname(base_dir)
-            run_forever_path = os.path.join(project_root, 'scripts', 'run_forever.py')
-            
-            # Detect virtual environment Python path (cross-platform)
-            if sys.platform == 'win32':
-                # Windows: venv/Scripts/python.exe or env/Scripts/python.exe
-                env_python = os.path.join(project_root, 'venv', 'Scripts', 'python.exe')
-                if not os.path.exists(env_python):
-                    env_python = os.path.join(project_root, 'env', 'Scripts', 'python.exe')
-            else:
-                # Unix-like: venv/bin/python or env/bin/python
-                env_python = os.path.join(project_root, 'venv', 'bin', 'python')
-                if not os.path.exists(env_python):
-                    env_python = os.path.join(project_root, 'env', 'bin', 'python')
-            
-            # Use system python if venv python doesn't exist
-            if not os.path.exists(env_python):
-                # Try alternative names
-                if sys.platform == 'win32':
-                    # Try python.exe, python3.exe, or just python
-                    for py_name in ['python.exe', 'python3.exe', 'python']:
-                        try:
-                            result = subprocess.run([py_name, '--version'], 
-                                                  capture_output=True, timeout=1)
-                            if result.returncode == 0:
-                                env_python = py_name
-                                break
-                        except (subprocess.TimeoutExpired, FileNotFoundError):
-                            continue
-                    else:
-                        env_python = 'python'
-                else:
-                    env_python = 'python3'
-            
-            # Verify paths exist
-            if not os.path.exists(run_forever_path):
-                return jsonify({
-                    'success': False,
-                    'error': f'run_forever.py not found at: {run_forever_path}'
-                }), 500
-            
-            # Build the base command with proper path quoting (cross-platform)
-            if sys.platform == 'win32':
-                # Windows: use list format for subprocess, no shell quoting needed
-                base_command_parts = [env_python, run_forever_path, '--project-id', str(project_id), '--model-id', str(model_id)]
-                base_command = ' '.join(f'"{part}"' if ' ' in part else part for part in base_command_parts)
-            else:
-                # Unix-like: use shlex.quote for shell safety
-                quoted_python = shlex.quote(env_python)
-                quoted_script = shlex.quote(run_forever_path)
-                base_command = f'{quoted_python} {quoted_script} --project-id {project_id} --model-id {model_id}'
-            
-            # Log the command that will be executed
-            logger.info(f"Preparing to execute scan command: {base_command}")
-            logger.info(f"Python path: {env_python} (exists: {os.path.exists(env_python)})")
-            logger.info(f"Script path: {run_forever_path} (exists: {os.path.exists(run_forever_path)})")
-            
-            # Check if process is already running - must match both project_id and model_id
-            # Check for both run_forever.py and run_scan.py (since run_forever.py spawns run_scan.py)
-            running_process = None
-            log_file = os.path.join(project_root, 'logs', f'scan_{project_id}_{model_id}.log')
-            
-            for proc in psutil.process_iter(['pid', 'name', 'cmdline', 'create_time']):
-                try:
-                    cmdline = proc.info.get('cmdline', [])
-                    if not cmdline:
-                        continue
-                    
-                    # Check if this is a run_forever.py or run_scan.py process
-                    has_run_forever = any('run_forever.py' in str(arg) for arg in cmdline)
-                    has_run_scan = any('run_scan.py' in str(arg) for arg in cmdline)
-                    if not (has_run_forever or has_run_scan):
-                        continue
-                    
-                    # Build command line string for matching
-                    cmdline_str = ' '.join(str(arg) for arg in cmdline)
-                    
-                    # Must match both project-id and model-id exactly
-                    project_match = f'--project-id {project_id}' in cmdline_str
-                    model_match = f'--model-id {model_id}' in cmdline_str
-                    
-                    if project_match and model_match:
-                        running_process = proc
-                        break
-                except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
-                    continue
-            
-            if running_process:
-                # Get output from log file if it exists
-                output_lines = []
-                try:
-                    output_lines.append('Scan process is currently running...')
-                    output_lines.append(f'Process ID: {running_process.info["pid"]}')
-                    import datetime
-                    start_time = datetime.datetime.fromtimestamp(running_process.info.get('create_time', 0))
-                    output_lines.append(f'Started: {start_time.strftime("%Y-%m-%d %H:%M:%S")}')
-                    
-                    # Try to read last few lines from log file
-                    if os.path.exists(log_file):
-                        try:
-                            with open(log_file, 'r') as f:
-                                lines = f.readlines()
-                                if lines:
-                                    output_lines.append('\n--- Last 10 lines from log ---')
-                                    output_lines.extend(lines[-10:])
-                        except Exception:
-                            pass
-                except Exception as e:
-                    output_lines = ['Scan is already running']
-                
-                return jsonify({
-                    'success': True,
-                    'already_running': True,
-                    'output': '\n'.join(output_lines)
-                })
-            
-            # Start the scan in background
-            try:
-                # Create log file directory if it doesn't exist
-                log_dir = os.path.dirname(log_file)
-                if log_dir and not os.path.exists(log_dir):
-                    os.makedirs(log_dir, exist_ok=True)
-                
-                # Log the command that will be executed BEFORE executing
-                logger.info(f"=== SCAN COMMAND PREVIEW ===")
-                logger.info(f"Base command: {base_command}")
-                logger.info(f"Working directory: {project_root} (exists: {os.path.exists(project_root)})")
-                logger.info(f"Log file: {log_file}")
-                
-                # Start the process (cross-platform)
-                # Build command list
-                cmd_list = [env_python, run_forever_path, '--project-id', str(project_id), '--model-id', str(model_id)]
-                
-                logger.info(f"Final command to execute: {base_command}")
-                logger.info(f"=== EXECUTING COMMAND NOW ===")
-                
-                # Open log file for writing
-                log_handle = open(log_file, 'a', encoding='utf-8')
-                
-                if sys.platform == 'win32':
-                    # Windows - use detached process
-                    process = subprocess.Popen(
-                        cmd_list,
-                        cwd=project_root,
-                        stdout=log_handle,
-                        stderr=subprocess.STDOUT,
-                        creationflags=subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.DETACHED_PROCESS,
-                        close_fds=False  # Windows doesn't support close_fds=True
-                    )
-                else:
-                    # Unix-like system - use start_new_session to detach from parent
-                    process = subprocess.Popen(
-                        cmd_list,
-                        cwd=project_root,
-                        stdout=log_handle,
-                        stderr=subprocess.STDOUT,
-                        start_new_session=True,  # Detach from parent process
-                        close_fds=True
-                    )
-                
-                log_handle.close()
-                
-                # Get the actual PID from the background process (may need to wait a moment)
-                import time
-                time.sleep(0.1)  # Brief wait to let process start
-                
-                # Try to get the actual PID of the run_forever.py process
-                actual_pid = None
-                try:
-                    # The process we started is the shell, find the actual python process
-                    for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
-                        try:
-                            cmdline = proc.info.get('cmdline', [])
-                            if cmdline and any('run_forever.py' in str(arg) for arg in cmdline):
-                                cmdline_str = ' '.join(str(arg) for arg in cmdline)
-                                if f'--project-id {project_id}' in cmdline_str and f'--model-id {model_id}' in cmdline_str:
-                                    actual_pid = proc.info['pid']
-                                    break
-                        except (psutil.NoSuchProcess, psutil.AccessDenied):
-                            continue
-                except Exception:
-                    pass
-                
-                logger.info(f"Process started. Shell PID: {process.pid}, Run Forever PID: {actual_pid}")
 
-                # In-app notification: scan started
-                try:
-                    if project.owner_id:
-                        from utils.notifications import notify_scan_started as _notif_start
-                        _notif_start(project_id, project.name, project.owner_id)
-                except Exception as _ne:
-                    logger.warning(f'Scan started notification failed: {_ne}')
+@projects_bp.route('/projects/<int:project_id>/scan-jobs')
+@login_required
+def scan_jobs(project_id):
+    from utils.scan_jobs import Queue, public_job
+    with get_orm_instance().get_session() as session:
+        if not _scan_project_access(session, project_id):
+            return jsonify(success=False, error='Project not found'), 404
+    return jsonify(success=True, jobs=[public_job(j) for j in Queue().list(project_id)])
 
-                # Build display command (the actual command that runs)
-                display_command = base_command
-                
-                return jsonify({
-                    'success': True,
-                    'already_running': False,
-                    'message': 'Scan started successfully',
-                    'command': display_command,
-                    'base_command': base_command,
-                    'log_file': log_file,
-                    'pid': actual_pid or process.pid
-                })
-            except Exception as e:
-                logger.error(f"Error starting scan: {e}")
-                return jsonify({
-                    'success': False,
-                    'error': f'Failed to start scan: {str(e)}'
-                }), 500
-                
-    except Exception as e:
-        logger.error(f"Error in start_scan: {e}")
-        return jsonify({
-            'success': False,
-            'error': f'Error starting scan: {str(e)}'
-        }), 500
 
+@projects_bp.route('/projects/<int:project_id>/scan-jobs/<job_id>/cancel', methods=['POST'])
+@login_required
+def cancel_scan_job(project_id, job_id):
+    from utils.scan_jobs import Queue, public_job
+    with get_orm_instance().get_session() as session:
+        if not _scan_project_access(session, project_id):
+            return jsonify(success=False, error='Project not found'), 404
+    queue = Queue()
+    job = queue.get(job_id)
+    if not job or job['project_id'] != project_id:
+        return jsonify(success=False, error='Job not found'), 404
+    return jsonify(success=True, job=public_job(queue.cancel(job_id)))

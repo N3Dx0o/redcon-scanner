@@ -1,0 +1,26 @@
+[Unit]
+Description=REDCON HAWK durable scan worker
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/scanner
+Environment=DB_DATABASE=scanner.db
+Environment=PYTHONUNBUFFERED=1
+Environment=SCAN_JOB_TIMEOUT_SECONDS=7200
+ExecStart=/var/www/scanner/venv/bin/python /var/www/scanner/scripts/scan_worker.py
+Restart=on-failure
+RestartSec=5
+KillMode=control-group
+TimeoutStopSec=20
+UMask=0077
+MemoryMax=2G
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

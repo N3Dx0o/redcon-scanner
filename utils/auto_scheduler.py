@@ -44,6 +44,12 @@ def _venv_python() -> str:
             return p
     return 'python3'
 
+def _arg_id(argv, flag):
+    try:
+        return int(argv[argv.index(flag) + 1])
+    except (ValueError, IndexError, TypeError):
+        return None
+
 def _is_scan_running(project_id: int, model_id: int) -> bool:
     """Return True if run_forever.py or run_scan.py is already running for this project+model."""
     target_project = f'--project-id {project_id}'
@@ -57,7 +63,7 @@ def _is_scan_running(project_id: int, model_id: int) -> bool:
             if not has_scan:
                 continue
             joined = ' '.join(str(a) for a in cmdline)
-            if target_project in joined and target_model in joined:
+            if _arg_id(cmdline, '--project-id') == project_id and _arg_id(cmdline, '--model-id') == model_id:
                 return True
         except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
             continue
@@ -74,7 +80,7 @@ def _is_any_scan_running(project_id: int) -> bool:
             has_scan = any('run_forever.py' in a or 'run_scan.py' in a for a in cmdline)
             if not has_scan:
                 continue
-            if target in ' '.join(str(a) for a in cmdline):
+            if _arg_id(cmdline, '--project-id') == project_id:
                 return True
         except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
             continue
@@ -145,30 +151,13 @@ def _run_due_scans():
                     project.auto_scan_model_id = None
                     continue
 
-                # ── Launch scan subprocess ─────────────────────────────────
-                log_dir  = os.path.join(root, 'logs')
-                os.makedirs(log_dir, exist_ok=True)
-                log_file = os.path.join(log_dir, f'auto_scan_{pid}_{mid}.log')
-
-                cmd = [env_python, run_forever, '--project-id', str(pid), '--model-id', str(mid)]
-
-                try:
-                    with open(log_file, 'a', encoding='utf-8') as lf:
-                        lf.write(f"\n\n=== AUTO SCAN STARTED {now.isoformat()} ===\n")
-                    log_handle = open(log_file, 'a', encoding='utf-8')
-
-                    proc = subprocess.Popen(
-                        cmd,
-                        cwd=root,
-                        stdout=log_handle,
-                        stderr=subprocess.STDOUT,
-                        start_new_session=True,
-                        close_fds=True,
-                    )
-                    logger.info(f"[AutoScan] Project {pid} ({name}): started PID {proc.pid} with model {mid}")
-                except Exception as e:
-                    logger.error(f"[AutoScan] Project {pid} ({name}): failed to start — {e}")
+                # Queue atomically; multiple web schedulers cannot duplicate a job.
+                from utils.scan_jobs import Queue
+                if project.owner_id is None or model.owner_id != project.owner_id:
+                    logger.warning('[AutoScan] Ownership mismatch for project %s; skipping', pid)
+                    _advance_next_scan(session, project, now)
                     continue
+                Queue().enqueue(int(pid), int(mid), int(project.owner_id))
 
                 # Advance next_scan_at
                 _advance_next_scan(session, project, now)

@@ -402,6 +402,12 @@ async def cleanup_agent(agent):
 # MAIN SCAN FUNCTION
 # ============================================================================
 
+def retryable_provider_error(exc):
+    """Only known temporary transport/provider failures permit a bounded retry."""
+    return (getattr(exc, 'status_code', None) in (408, 429, 502, 503, 504)
+            or type(exc).__name__ in ('APIConnectionError', 'APITimeoutError', 'Timeout', 'TimeoutError', 'ConnectError'))
+
+
 async def main() -> int:
     """
     Main async function to run the security scan.
@@ -494,7 +500,7 @@ async def main() -> int:
                     current_cost = 0.0
                 if current_cost >= project_max_cost:
                     print(f"\n=== MAX COST EXCEEDED: Current cost ({current_cost}) >= Maximum allowed cost ({project_max_cost}). Aborting scan. ===")
-                    return 0
+                    return 1
 
             # Compute all candidate targets
             target_dirs = filter_target_dirs(base_path, excluded_dirs, included_dirs)
@@ -533,6 +539,9 @@ async def main() -> int:
                 print("\n=== SHUTDOWN REQUESTED BEFORE MAIN LOOP ===")
                 return 0
 
+            # Failed targets must not be reported as successful scans.
+            failed_targets = 0
+            retryable_failures = 0
             # Process each target directory
             i = 0
             for i, target in enumerate(target_dirs, 1):
@@ -550,12 +559,14 @@ async def main() -> int:
                     
                     # Verify MCP server file exists
                     if not Path(filesystem_server_path).exists():
+                        failed_targets += 1
                         print(f"ERROR: MCP server file not found: {filesystem_server_path}")
                         print(f"  Current working directory: {os.getcwd()}")
                         continue
                     
                     # Verify target directory exists
                     if not target_absolute_path.exists():
+                        failed_targets += 1
                         print(f"WARNING: Target directory does not exist: {target_absolute_path}")
                         print(f"  Skipping target: {target}")
                         continue
@@ -577,6 +588,7 @@ async def main() -> int:
                         )
                     except RuntimeError as e:
                         if "generator didn't yield" in str(e):
+                            failed_targets += 1
                             print(f"ERROR: MCP server connection failed for target: {target}")
                             print(f"  This usually means the MCP server process failed to start or communicate.")
                             print(f"  MCP server: {filesystem_server_path}")
@@ -638,6 +650,8 @@ async def main() -> int:
                         await cleanup_agent(agent)
                         raise
                     except Exception as e:
+                        failed_targets += 1
+                        retryable_failures += int(retryable_provider_error(e))
                         print(f"Error in agent for target {target}: {e}")
                         await cleanup_agent(agent)
                         continue
@@ -652,11 +666,19 @@ async def main() -> int:
                 except Exception as e:
                     import traceback as tb
                     tb.print_exc()
+                    failed_targets += 1
+                    retryable_failures += int(retryable_provider_error(e))
                     print(f"Error processing target {target}: {e}")
                     update_cost_on_interrupt(orm)
                     continue
             
             print(f"Total targets processed: {i}")
+            if shutdown_requested:
+                return 130
+            if failed_targets or i == 0:
+                print(f"Scan incomplete: {failed_targets} failed targets")
+                return 75 if failed_targets and retryable_failures == failed_targets else 1
+            return 0
 
     except KeyboardInterrupt:
         update_cost_on_interrupt(orm)
@@ -678,7 +700,7 @@ async def main() -> int:
         print(f"Error during database scan: {e}")
         import traceback as tb
         tb.print_exc()
-        return 1
+        return 75 if retryable_provider_error(e) else 1
 
 
 # ============================================================================

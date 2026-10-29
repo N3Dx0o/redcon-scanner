@@ -346,6 +346,11 @@
 {% endblock %}
 
 {% block content %}
+<div class="card mb-3"><div class="card-body">
+  <h5>Scan jobs</h5>
+  <p class="text-muted">Scans run in a persistent queue. Temporary failures have bounded retries; interrupted scans restart from the beginning.</p>
+  <div id="scanJobsStatus" aria-live="polite">Loading scan jobs…</div>
+</div></div>
 <div class="container-fluid px-4 py-4">
     <!-- Header Section -->
     <div class="card mb-4">
@@ -1316,11 +1321,11 @@ function rcOverlay() {
                         statusBox(stat, 'Scan is already running', 'info');
                         if (data.output) { outTxt.textContent = data.output; out.style.display = 'block'; }
                     } else {
-                        let msg = 'Scan started successfully';
+                        let msg = data.message || 'Scan queued';
                         if (data.pid) msg += '\nProcess ID: ' + data.pid;
                         if (data.log_file) msg += '\nLog: ' + data.log_file;
                         statusBox(stat, msg, 'success');
-                        showToast('Scan started successfully', 'success');
+                        showToast(data.message || 'Scan queued', 'success');
                     }
                 } else { statusBox(stat, data.error || 'Failed to start scan', 'error'); }
                 btn.disabled = false; btn.textContent = '▶ Start Scan';
@@ -1667,5 +1672,47 @@ document.getElementById('scheduleModalOverlay').addEventListener('click', functi
     if(e.target === this) closeScheduleModal();
 });
 
+</script>
+<script>
+(function () {
+  const box = document.getElementById('scanJobsStatus');
+  const base = {{ url_for('projects.scan_jobs', project_id=project.id)|tojson }};
+  const csrf = {{ csrf_token()|tojson }};
+  async function refresh() {
+    try {
+      const response = await fetch(base);
+      if (!response.ok) throw new Error('Could not load job status');
+      const data = await response.json();
+      box.replaceChildren();
+      if (!data.jobs.length) box.textContent = 'No queued scans yet.';
+      for (const job of data.jobs) {
+        const row = document.createElement('div');
+        row.className = 'mb-2';
+        const label = document.createElement('span');
+        label.textContent = job.state + ' · attempt ' + job.attempts + '/' + job.max_attempts + ' · ' + (job.error || job.progress);
+        row.append(label);
+        if (['queued', 'running', 'retry_wait'].includes(job.state)) {
+          const button = document.createElement('button');
+          button.className = 'btn btn-sm btn-outline-danger ms-2';
+          button.textContent = job.cancel_requested ? 'Cancelling…' : 'Cancel';
+          button.disabled = Boolean(job.cancel_requested);
+          button.onclick = async () => {
+            button.disabled = true;
+            try {
+              const result = await fetch(base + '/' + job.id + '/cancel', {method: 'POST', headers: {'X-CSRFToken': csrf}});
+              if (!result.ok) throw new Error('Cancellation failed');
+              await refresh();
+            } catch (error) { label.textContent = error.message; button.disabled = false; }
+          };
+          row.append(button);
+        }
+        box.append(row);
+      }
+    } catch (error) { box.textContent = error.message; }
+  }
+  refresh();
+  const timer = setInterval(refresh, 5000);
+  window.addEventListener('pagehide', () => clearInterval(timer), {once: true});
+})();
 </script>
 {% endblock %}
