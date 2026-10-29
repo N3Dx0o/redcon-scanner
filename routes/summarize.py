@@ -111,7 +111,8 @@ def summarize_page():
                 'anthropic': 'anthropic',
                 'gemini': 'google',
                 'xai': 'xai',
-                'deepseek': 'deepseek'
+                'deepseek': 'deepseek',
+                'larprouter': 'openai'
             }
             provider = vendor_mapping.get(model.vendor.lower())
             if not provider:
@@ -124,12 +125,18 @@ def summarize_page():
             os.environ[env_var] = model.api_key or ''
             try:
                 full_model_name = f"gemini/{model.model_name}" if provider == 'google' else f"{provider}/{model.model_name}"
+                options = {"model": full_model_name}
+                if model.vendor.lower() == "larprouter":
+                    from utils.ai_models_utils import model_completion_options
+                    options = model_completion_options(model)
+                    options.update(timeout=45, num_retries=0)
+                else:
+                    options["timeout"] = 30
                 resp = completion(
-                    model=full_model_name,
+                    **options,
                     messages=[{"role": "user", "content": summary_prompt}],
-                    max_tokens=500,
+                    max_tokens=2048 if model.vendor.lower() == "larprouter" else 500,
                     temperature=0.2,
-                    timeout=30
                 )
                 summary_text = resp.choices[0].message.content if getattr(resp, 'choices', None) else 'No response.'
             except Exception as e:

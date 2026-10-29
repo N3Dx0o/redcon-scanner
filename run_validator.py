@@ -52,7 +52,7 @@ from nerve.runtime.flow import Flow
 # Shuffle findings to process in random order
 import random
 
-from utils.ai_models_utils import init_models_env, format_model_name_for_litellm
+from utils.ai_models_utils import init_models_env, format_model_name_for_litellm, create_model_agent, model_completion_options
 
 # ============================================================================
 # MONKEY-PATCHES FOR NERVE LIBRARY
@@ -329,13 +329,14 @@ Example:
 Generate your JSON array of validation questions:"""
 
     try:
+        options = model_completion_options(model)
+        options.setdefault("timeout", 30)
         response = completion(
-            model=formatted_model_name,
+            **options,
             messages=[
                 {"role": "system", "content": "You are a security analysis judge. Return only valid JSON arrays of question strings."},
                 {"role": "user", "content": judge_prompt}
             ],
-            timeout=30
         )
         # Extract response content
         response_text = response.choices[0].message.content if response.choices else None
@@ -666,7 +667,7 @@ async def validate_finding(finding: Finding, project: Project, model: AIModel, o
 
 
     try:
-        agent = await NerveAgent.create(
+        agent = await create_model_agent(model,
             formatted_model_name,
             Configuration(
                 agent=BASE_PROMPT,

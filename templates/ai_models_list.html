@@ -24,8 +24,11 @@
     <div class="aim-provider-pill"><i class="bi bi-gem" style="color:#4285f4;"></i> Gemini</div>
     <div class="aim-provider-pill"><i class="bi bi-lightning" style="color:#e5e5e5;"></i> xAI</div>
     <div class="aim-provider-pill"><i class="bi bi-search-heart" style="color:#4d9de0;"></i> DeepSeek</div>
+    <div class="aim-provider-pill"><i class="bi bi-shuffle" style="color:#a78bfa;"></i> LarpRouter</div>
     <div class="aim-provider-pill"><i class="bi bi-hdd-stack" style="color:#34d399;"></i> Ollama</div>
   </div>
+
+  <p class="small text-muted mb-3">At a $0 LarpRouter balance, use <strong>deepseek-v4.1-flash</strong> or <strong>glm-5.3-flash</strong>, subject to free-tier limits. Other models may require credit.</p>
 
   <!-- Models grid -->
   {% if models %}
@@ -39,7 +42,7 @@
   </div>
   <div class="row g-3 mb-4">
     {% for model in models %}
-    {% set vcolors = {'openai':('#10a37f','bi-stars'),'anthropic':('#d4a574','bi-cpu'),'gemini':('#4285f4','bi-gem'),'xai':('#e5e5e5','bi-lightning'),'deepseek':('#4d9de0','bi-search-heart'),'ollama':('#34d399','bi-hdd-stack')} %}
+    {% set vcolors = {'openai':('#10a37f','bi-stars'),'anthropic':('#d4a574','bi-cpu'),'gemini':('#4285f4','bi-gem'),'xai':('#e5e5e5','bi-lightning'),'deepseek':('#4d9de0','bi-search-heart'),'larprouter':('#a78bfa','bi-shuffle'),'ollama':('#34d399','bi-hdd-stack')} %}
     {% set vc = vcolors.get(model.vendor.lower(), ('#9198a1','bi-robot')) %}
     <div class="col-xl-4 col-lg-6" id="model-card-{{ model.id }}">
       <div class="aim-card" style="--vc:{{ vc[0] }};">
@@ -111,6 +114,9 @@
             </div>
             <div class="aim-vendor-card" data-vendor="deepseek" onclick="selectVendor(this)">
               <i class="bi bi-search-heart" style="color:#4d9de0;font-size:1.4rem;"></i><span>DeepSeek</span>
+            </div>
+            <div class="aim-vendor-card" data-vendor="larprouter" onclick="selectVendor(this)">
+              <i class="bi bi-shuffle" style="color:#a78bfa;font-size:1.4rem;"></i><span>LarpRouter</span>
             </div>
             <div class="aim-vendor-card" data-vendor="ollama" onclick="selectVendor(this)">
               <i class="bi bi-hdd-stack" style="color:#34d399;font-size:1.4rem;"></i><span>Ollama</span>
@@ -241,7 +247,7 @@
 </style>
 
 <script>
-const API_KEY_HINTS={openai:'Starts with sk-...',anthropic:'Starts with sk-ant-...',gemini:'39-character key',xai:'Starts with xai-...',deepseek:'40+ character key',ollama:'Not required'};
+const API_KEY_HINTS={larprouter:'Starts with lrsk-... · Includes DeepSeek Flash',openai:'Starts with sk-...',anthropic:'Starts with sk-ant-...',gemini:'39-character key',xai:'Starts with xai-...',deepseek:'40+ character key',ollama:'Not required'};
 
 function selectVendor(el){
   document.querySelectorAll('.aim-vendor-card').forEach(c=>c.classList.remove('selected'));

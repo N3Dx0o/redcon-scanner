@@ -2,6 +2,7 @@
 import os
 import re
 import requests
+from functools import lru_cache
 from typing import List, Dict, Any, Optional
 from db.models import AIModel
 
@@ -11,6 +12,7 @@ AI_KEYS_MAPPING = {
     "gemini": "GEMINI_API_KEY",
     "xai": "XAI_API_KEY",
     "deepseek": "DEEPSEEK_API_KEY",
+    "larprouter": "LARPROUTER_API_KEY",
 }
 
 
@@ -50,6 +52,8 @@ def format_model_name_for_litellm(model) -> str:
     model_name = model.model_name
     
     # Special handling for vendors that need specific formatting
+    if vendor == 'larprouter':
+        return f"openai/{model_name}?api_base={LARPROUTER_BASE_URL}"
     if vendor == 'gemini':
         return f"gemini/{model_name}"
     elif vendor == 'ollama':
@@ -77,6 +81,8 @@ def validate_api_key(vendor: str, api_key: str) -> bool:
     """Validate API key format and basic structure without making expensive API calls"""
     try:
         # Basic API key validation by vendor
+        if vendor == 'larprouter':
+            return api_key.startswith('lrsk-') and 20 <= len(api_key) <= 200
         if vendor == 'openai':
             # OpenAI keys start with 'sk-' and are typically 48+ characters
             return api_key.startswith('sk-') and len(api_key) >= 48
@@ -292,7 +298,7 @@ def discover_and_add_ollama_models(orm, session, ollama_base_url: str = "http://
     }
 
 
-def discover_and_add_models_for_vendor(orm, session, vendor: str, api_key: str) -> Dict[str, Any]:
+def discover_and_add_models_for_vendor(orm, session, vendor: str, api_key: str, owner_id=None) -> Dict[str, Any]:
     """
     Discover and add all suitable models for a given vendor and API key.
     Returns a dict with 'successful_models' and 'failed_models' lists.
@@ -305,6 +311,9 @@ def discover_and_add_models_for_vendor(orm, session, vendor: str, api_key: str) 
             'error': f'Invalid API key format for vendor {vendor}'
         }
     
+    if vendor == 'larprouter':
+        return discover_larprouter_models(orm, session, api_key, owner_id)
+
     # Temporarily set the API key in environment for filtering
     env_var = AI_KEYS_MAPPING.get(vendor)
     if not env_var:
@@ -380,3 +389,83 @@ def discover_and_add_models_for_vendor(orm, session, vendor: str, api_key: str) 
             os.environ.pop(env_var, None)
 
 
+
+
+LARPROUTER_BASE_URL = "https://larprouter.com/v1"
+
+
+def model_completion_options(model):
+    """Keep gateway credentials scoped to the individual request."""
+    if model.vendor.lower() == "larprouter":
+        catalog = load_larprouter_catalog(model.api_key)
+        entry = next((item for item in catalog if item.get("id") == model.model_name), None)
+        if not entry or "pricing" not in entry:
+            raise ValueError("LarpRouter did not publish pricing for this model; refresh the model list.")
+        pricing = entry["pricing"]
+        return {
+            "model": f"openai/{model.model_name}",
+            "api_base": LARPROUTER_BASE_URL,
+            "api_key": model.api_key,
+            "extra_headers": {"User-Agent": "REDCON-HAWK/1.0"},
+            "timeout": 90,
+            "num_retries": 2,
+            "input_cost_per_token": float(pricing["input_per_1m_usd"]) / 1_000_000,
+            "output_cost_per_token": float(pricing["output_per_1m_usd"]) / 1_000_000,
+        }
+    return {"model": format_model_name_for_litellm(model)}
+
+
+async def create_model_agent(model, generator, configuration, **kwargs):
+    """Apply per-agent gateway settings without overriding another provider's key."""
+    from nerve.runtime.agent import Agent
+    agent = await Agent.create(generator, configuration, **kwargs)
+    if model.vendor.lower() == "larprouter":
+        options = model_completion_options(model)
+        options.pop("model")
+        options.pop("api_base")
+        agent.generation_engine.generator_params.update(options)
+    return agent
+
+
+def discover_larprouter_models(orm, session, api_key, owner_id=None):
+    """Discover the key's live catalog, including Flash models."""
+    result = {"successful_models": [], "failed_models": [], "error": None}
+    try:
+        load_larprouter_catalog.cache_clear()
+        catalog = load_larprouter_catalog(api_key)
+        for item in catalog:
+            if item.get("kind", "chat") != "chat" or not item.get("id"):
+                continue
+            name = item["id"]
+            existing = session.query(AIModel).filter_by(
+                vendor="larprouter", model_name=name, owner_id=owner_id,
+            ).first()
+            if existing:
+                existing.api_key = api_key
+            else:
+                session.add(AIModel(model_name=name, vendor="larprouter", api_key=api_key, owner_id=owner_id))
+            result["successful_models"].append(name)
+        if not result["successful_models"]:
+            result["error"] = "LarpRouter returned no chat models for this key."
+        session.flush()
+    except requests.RequestException:
+        result["error"] = "Could not reach LarpRouter. Please try again shortly."
+    except (ValueError, TypeError, KeyError):
+        result["error"] = "LarpRouter returned an invalid catalog or rejected the key. Check your account and retry."
+    return result
+
+
+@lru_cache(maxsize=32)
+def load_larprouter_catalog(api_key):
+    """Cache public model metadata per key for this process; never persist secrets."""
+    response = requests.get(
+        LARPROUTER_BASE_URL + "/models",
+        headers={"Authorization": "Bearer " + api_key, "User-Agent": "REDCON-HAWK/1.0"},
+        timeout=20,
+    )
+    if response.status_code != 200:
+        raise ValueError(f"LarpRouter model discovery failed (HTTP {response.status_code}).")
+    catalog = response.json().get("data")
+    if not isinstance(catalog, list) or not all(isinstance(item, dict) for item in catalog):
+        raise ValueError("Invalid model catalog")
+    return catalog

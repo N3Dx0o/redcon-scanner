@@ -49,7 +49,7 @@ from ai_tools.threat_modeling import validate_finding_before_db
 from db import get_orm, Project, AIModel, Finding, ProjectStatus
 from db.orm import T
 from threat_modeling_tools import *
-from utils.ai_models_utils import init_models_env, format_model_name_for_litellm
+from utils.ai_models_utils import init_models_env, format_model_name_for_litellm, create_model_agent, model_completion_options
 from utils.project_utils import filter_target_dirs
 
 # ============================================================================
@@ -563,7 +563,7 @@ async def main() -> int:
                     # Create agent
                     
                     try:
-                        agent = await NerveAgent.create(
+                        agent = await create_model_agent(model,
                             formatted_model_name,
                             Configuration(
                                 agent=get_system_prompt(),

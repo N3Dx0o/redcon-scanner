@@ -52,7 +52,7 @@ from ai_tools.facts_tools import (
 )
 from db import get_orm, Project, AIModel
 from db.models import FactType
-from utils.ai_models_utils import init_models_env, format_model_name_for_litellm
+from utils.ai_models_utils import init_models_env, format_model_name_for_litellm, create_model_agent, model_completion_options
 
 # ============================================================================
 # SENTRY INITIALIZATION
@@ -600,7 +600,7 @@ async def gather_facts_for_type(
         
         # Create agent
         try:
-            agent = await NerveAgent.create(
+            agent = await create_model_agent(model,
                 formatted_model_name,
                 Configuration(
                     agent=get_system_prompt(),

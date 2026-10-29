@@ -110,7 +110,7 @@ def api_ai_models():
                 # Use centralized utility to discover and add all suitable models
                 from utils.ai_models_utils import discover_and_add_models_for_vendor
                 
-                result = discover_and_add_models_for_vendor(orm, session, vendor, api_key)
+                result = discover_and_add_models_for_vendor(orm, session, vendor, api_key, owner_id=current_user.id)
                 
                 if result.get('error'):
                     return jsonify({
@@ -595,6 +595,40 @@ def test_model_connection():
             model_name = model_obj.model_name
             vendor = model_obj.vendor
             api_key = model_obj.api_key or ''
+
+        if vendor.lower() == 'larprouter':
+            from utils.ai_models_utils import model_completion_options
+            try:
+                options = model_completion_options(model_obj)
+                options.update(timeout=45, num_retries=0)
+                response = completion(
+                    **options,
+                    messages=[{"role": "user", "content": "Reply with OK."}],
+                    max_tokens=256,
+                )
+                text = response.choices[0].message.content if response.choices else None
+                if not text:
+                    return jsonify({'success': False, 'error': 'The model returned no text. Please retry.'})
+                return jsonify({'success': True, 'message': 'Connection successful!',
+                                'response': text, 'model_used': model_name, 'model_name': model_name})
+            except Exception as exc:
+                raw_status = getattr(exc, 'status_code', None)
+                try:
+                    status = int(raw_status)
+                except (TypeError, ValueError):
+                    status = None
+                detail = str(exc).lower()
+                if 'insufficient account credit' in detail or 'insufficient_credit' in detail:
+                    status = 402
+                errors = {401: 'LarpRouter rejected the API key.',
+                          402: f'{model_name}: LarpRouter requires account credit for this request. At $0 balance, try deepseek-v4.1-flash or glm-5.3-flash, subject to free-tier limits.',
+                          403: 'LarpRouter denied access to this model. Check your key permissions and model allowance.',
+                          429: 'LarpRouter rate limit reached. Please retry later.',
+                          503: 'LarpRouter model is temporarily unavailable.'}
+                fallback = (f'{model_name}: LarpRouter timed out. Please retry.'
+                            if 'timeout' in type(exc).__name__.lower() or 'timed out' in detail
+                            else f'{model_name}: LarpRouter request failed' + (f' (HTTP {status}).' if status else '.'))
+                return jsonify({'success': False, 'error': errors.get(status, fallback)})
 
         if vendor.lower() != 'ollama' and not api_key:
             return jsonify({'success': False, 'error': 'No API key stored for this model'})
